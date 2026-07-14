@@ -523,6 +523,17 @@ body.kiosk-mode .foto-nama{font-size:14px}
       </div>
     </div>
 
+    <div class="card" id="pengumuman-reminder-banner" style="display:none;background:linear-gradient(135deg,#dc2626,#b91c1c);border:none;color:#fff;margin-bottom:20px">
+      <div class="card-body" style="padding:16px 20px;display:flex;align-items:center;gap:14px">
+        <div style="font-size:34px;line-height:1">🔴</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px;margin-bottom:2px">Ada pengumuman urgent yang belum dikirim ke grup WA!</div>
+          <div id="pengumuman-reminder-list" style="font-size:13px;opacity:0.95;line-height:1.5"></div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="nav('pengumuman',document.querySelectorAll('.nav-item')[13])" style="background:rgba(255,255,255,0.2);color:#fff;border-color:rgba(255,255,255,0.4);flex-shrink:0;font-size:11px">Buka →</button>
+      </div>
+    </div>
+
     <div class="feature-grid">
       <div class="feature-card" onclick="nav('soal',document.querySelectorAll('.nav-item')[1])">
         <div class="fc-icon">✎</div>
@@ -738,6 +749,19 @@ body.kiosk-mode .foto-nama{font-size:14px}
       <div class="chat-header">
         <h3>◎ AI Chat — Asisten Guru</h3>
         <p>Tanya apapun seputar mengajar, kurikulum, atau pengelolaan kelas</p>
+      </div>
+      <div style="padding:10px 16px;background:var(--accent-light);border-bottom:1px solid var(--border)">
+        <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;cursor:pointer" onclick="toggleProfilPanel()">
+          <span style="font-size:12px;font-weight:700;color:#1d4ed8">🧠 Profil Mengajar Bu Via <span id="profil-status" style="font-weight:400;color:var(--text-sub)"></span></span>
+          <span id="profil-toggle-icon" style="font-size:12px;color:#1d4ed8">▾ Lihat</span>
+        </div>
+        <div id="profil-panel" style="display:none;margin-top:8px">
+          <div id="profil-text" style="font-size:12px;color:var(--text-sub);line-height:1.6;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;white-space:pre-wrap">Belum ada profil. Mengobrol beberapa kali dulu dengan AI Chat, lalu klik "Perbarui Profil" supaya AI mulai mengenali gaya mengajar Bu Via.</div>
+          <div style="display:flex;gap:6px">
+            <button class="btn btn-ghost btn-sm" onclick="updateTeacherProfile()" style="flex:1;font-size:11px">🔄 Perbarui Profil dari Riwayat Chat</button>
+            <button class="btn btn-ghost btn-sm" onclick="clearChatHistory()" style="font-size:11px">🗑️ Reset Riwayat</button>
+          </div>
+        </div>
       </div>
       <div id="chat-messages" class="chat-messages">
         <div class="bubble-ai">Halo Bu Guru! 👋 Saya siap membantu seputar:<br>• Strategi & metode mengajar<br>• Materi Kurikulum Merdeka<br>• Ide aktivitas & game edukatif<br>• Manajemen kelas & penilaian<br><br>Silakan tanya apa saja! 😊</div>
@@ -1776,6 +1800,8 @@ function applyLoadedData(key, data) {
     case 'materi_info': materiInfoData = data; break;
     case 'kepsek_info': kepsekInfo = data; break;
     case 'kiosk_pin': if (data) localStorage.setItem('kiosk_pin', data); break;
+    case 'chat_history': chatHistory = data || []; renderChatHistoryBubbles(); break;
+    case 'teacher_profile': teacherProfile = data || ''; renderProfilPanel(); break;
     case 'api_key': if (data) { apiKey = data; localStorage.setItem('guru_ai_api_key', data); checkApiKey(); } break;
   }
 }
@@ -1791,13 +1817,16 @@ function refreshCurrentPageData() {
   if (pageId === 'reward') initReward();
   if (pageId === 'icebreaking') renderIceFav();
   if (pageId === 'kelas') { checkSiswaKelas(); renderWheel(); }
+  if (pageId === 'chat') { renderChatHistoryBubbles(); renderProfilPanel(); }
   checkBirthdaysToday();
+  checkPengumumanReminder();
 }
 
 
 let students=[];
+let teacherProfile=localStorage.getItem('teacher_profile')||'';
 let apiKey=localStorage.getItem('guru_ai_api_key')||'';
-let chatHistory=[];
+let chatHistory=JSON.parse(localStorage.getItem('chat_history')||'[]');
 let timerInterval=null,timerTotal=300,timerRemaining=300,timerRunning=false;
 let wheelSpinning=false,wheelAngle=0,spinHistory=[];
 const wheelColors=['#0f2044','#1a3461','#2e6fcc','#1d5cb8','#243e78','#1e40af','#1d4ed8','#2563eb','#3b82f6','#60a5fa'];
@@ -1851,6 +1880,8 @@ function nav(page,el,skipHistory,skipStack){
   if(page==='reward')initReward();
   if(page==='icebreaking'){initQuickIce();renderIceFav();}
   if(page==='kelas'){checkSiswaKelas();renderWheel();}
+  if(page==='chat'){renderChatHistoryBubbles();renderProfilPanel();}
+  checkPengumumanReminder();
   closeSidebar();
   updateBackButton(page);
   if (!skipStack) {
@@ -1965,18 +1996,97 @@ async function sendChat(){
   if(!msg)return;
   addBubble(msg,'user');input.value='';
   chatHistory.push({role:'user',content:msg});
+  saveChatHistory();
   addBubble('...','ai','typing');
   try{
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:2048,output_config:{effort:'low'},system:'Kamu adalah asisten AI untuk guru kelas 4 SD Kurikulum Merdeka Indonesia. Berikan saran praktis dan dapat langsung diimplementasikan. Bahasa hangat dan suportif.',messages:chatHistory})});
+    let sysPrompt='Kamu adalah asisten AI untuk guru kelas 4 SD Kurikulum Merdeka Indonesia. Berikan saran praktis dan dapat langsung diimplementasikan. Bahasa hangat dan suportif.';
+    if(teacherProfile && teacherProfile.trim()){
+      sysPrompt += '\n\nBerikut konteks tentang guru yang kamu ajak bicara (Bu Via), hasil rangkuman dari obrolan-obrolan sebelumnya. Gunakan ini untuk menyesuaikan gaya, contoh, dan rekomendasimu supaya terasa personal dan relevan dengan cara mengajarnya:\n' + teacherProfile;
+    }
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:2048,output_config:{effort:'low'},system:sysPrompt,messages:chatHistory})});
     const data=await res.json();
-    if(data.error){document.getElementById('typing')?.remove();addBubble('Error: '+data.error.message,'ai');chatHistory.pop();return;}
+    if(data.error){document.getElementById('typing')?.remove();addBubble('Error: '+data.error.message,'ai');chatHistory.pop();saveChatHistory();return;}
     const chatTextBlock=data.content?.find(c=>c.type==='text');
     const reply=chatTextBlock?.text||'Maaf, tidak bisa menjawab saat ini.';
     document.getElementById('typing')?.remove();
     addBubble(reply,'ai');
     chatHistory.push({role:'assistant',content:reply});
+    saveChatHistory();
   }catch{document.getElementById('typing')?.remove();addBubble('Terjadi kesalahan. Cek koneksi internet ya Bu Guru.','ai');}
 }
+
+function saveChatHistory(){
+  localStorage.setItem('chat_history', JSON.stringify(chatHistory));
+  saveToFirestore('chat_history', chatHistory);
+}
+
+function renderChatHistoryBubbles(){
+  const c=document.getElementById('chat-messages');
+  if(!c || !chatHistory.length) return;
+  // remove the default welcome bubble and rebuild from persisted history
+  c.innerHTML='';
+  chatHistory.forEach(m=>{
+    const d=document.createElement('div');
+    d.className = m.role==='user' ? 'bubble-user' : 'bubble-ai';
+    d.style.whiteSpace='pre-wrap';
+    d.textContent = m.content;
+    c.appendChild(d);
+  });
+  c.scrollTop = c.scrollHeight;
+}
+
+function clearChatHistory(){
+  if(!confirm('Hapus semua riwayat AI Chat? Profil mengajar yang sudah tersimpan tidak akan ikut terhapus.')) return;
+  chatHistory=[];
+  saveChatHistory();
+  const c=document.getElementById('chat-messages');
+  c.innerHTML='<div class="bubble-ai">Halo Bu Guru! 👋 Riwayat sebelumnya sudah direset. Silakan mulai obrolan baru! 😊</div>';
+  showToast('Riwayat chat direset');
+}
+
+function toggleProfilPanel(){
+  const panel=document.getElementById('profil-panel');
+  const icon=document.getElementById('profil-toggle-icon');
+  const showing = panel.style.display==='block';
+  panel.style.display = showing ? 'none' : 'block';
+  icon.textContent = showing ? '▾ Lihat' : '▴ Sembunyikan';
+}
+
+function renderProfilPanel(){
+  const el=document.getElementById('profil-text');
+  const status=document.getElementById('profil-status');
+  if(!el) return;
+  if(teacherProfile && teacherProfile.trim()){
+    el.textContent = teacherProfile;
+    status.textContent = '· sudah ada profil';
+  } else {
+    el.textContent = 'Belum ada profil. Mengobrol beberapa kali dulu dengan AI Chat, lalu klik "Perbarui Profil" supaya AI mulai mengenali gaya mengajar Bu Via.';
+    status.textContent = '';
+  }
+}
+
+async function updateTeacherProfile(){
+  if(chatHistory.length < 2){
+    showToast('Ngobrol dulu beberapa kali sebelum profil bisa diperbarui.', true);
+    return;
+  }
+  if(!apiKey){ showToast('Setup API Key dulu ya, Bu.', true); return; }
+  showToast('Menganalisis riwayat chat untuk memperbarui profil...');
+  const historyText = chatHistory.map(m => (m.role==='user'?'Bu Via':'AI') + ': ' + m.content).join('\n\n');
+  const prompt = 'Berikut ini riwayat percakapan antara seorang guru kelas 4 SD (Bu Via) dengan asisten AI-nya, dan profil ringkas yang sudah tersimpan sebelumnya (jika ada).\n\n'
+    + 'PROFIL SEBELUMNYA:\n' + (teacherProfile && teacherProfile.trim() ? teacherProfile : '(belum ada)') + '\n\n'
+    + 'RIWAYAT PERCAKAPAN TERBARU:\n' + historyText + '\n\n'
+    + 'Tugasmu: perbarui/gabungkan menjadi SATU profil ringkas (maksimal 8-10 poin) tentang gaya mengajar, kebutuhan, tantangan, dan preferensi Bu Via, berdasarkan apa yang benar-benar terlihat dari percakapan di atas. Jangan mengarang hal yang tidak ada dasarnya. Format: poin-poin singkat, bahasa Indonesia, tanpa basa-basi pembuka/penutup.';
+  const result = await callClaude(prompt);
+  if(result){
+    teacherProfile = result.trim();
+    localStorage.setItem('teacher_profile', teacherProfile);
+    saveToFirestore('teacher_profile', teacherProfile);
+    renderProfilPanel();
+    showToast('Profil mengajar berhasil diperbarui! ✓');
+  }
+}
+
 function quickChat(m){document.getElementById('chat-input').value=m;sendChat();}
 function addBubble(msg,type,id=''){
   const c=document.getElementById('chat-messages'),d=document.createElement('div');
@@ -3076,7 +3186,9 @@ function addPengumuman() {
     tanggal: document.getElementById('pg-tanggal').value || new Date().toISOString().slice(0,10),
     kategori: document.getElementById('pg-kategori').value,
     prioritas: document.getElementById('pg-prioritas').value,
-    isi: document.getElementById('pg-isi').value
+    isi: document.getElementById('pg-isi').value,
+    terkirimWA: false,
+    terkirimWAAt: null
   });
   localStorage.setItem('pengumuman', JSON.stringify(pengumumanData)); saveToFirestore('pengumuman', pengumumanData);
   renderPengumuman();
@@ -3097,14 +3209,64 @@ function renderPengumuman() {
           <div style="font-weight:700;font-size:14px;margin-bottom:3px">${priorityIcon[p.prioritas]||''}${p.judul}</div>
           <div style="font-size:11px;color:var(--text-sub);margin-bottom:5px">${p.tanggal} • ${p.kategori}</div>
           ${p.isi ? `<div style="font-size:13px;color:var(--text);line-height:1.6">${p.isi}</div>` : ''}
+          ${p.terkirimWA ? `<div style="font-size:11px;color:#16a34a;margin-top:6px;font-weight:600">✓ Terkirim ke WA · ${formatWaktuKirim(p.terkirimWAAt)}</div>` : ''}
         </div>
         <button class="btn-sm btn-danger" onclick="deletePengumuman(${p.id})" style="flex-shrink:0">✕</button>
+      </div>
+      <div style="margin-top:8px">
+        <button class="btn btn-sm" onclick="kirimPengumumanWA(${p.id})" style="background:#25D366;color:#fff;font-size:11px;padding:6px 10px">💬 ${p.terkirimWA ? 'Kirim Ulang ke WA' : 'Kirim ke Grup WA'}</button>
       </div>
     </div>`).join('');
 }
 
-function deletePengumuman(id) { pengumumanData = pengumumanData.filter(p => p.id !== id); localStorage.setItem('pengumuman',JSON.stringify(pengumumanData)); saveToFirestore('pengumuman', pengumumanData); renderPengumuman(); }
-function clearPengumuman() { if(!confirm('Hapus semua pengumuman?'))return; pengumumanData=[]; localStorage.setItem('pengumuman','[]'); renderPengumuman(); }
+function formatWaktuKirim(ts){
+  if (!ts) return '';
+  var d = new Date(ts);
+  var jam = String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0');
+  return formatTanggalIndo(d.toISOString().slice(0,10)) + ', ' + jam;
+}
+
+const KATEGORI_LABEL_WA = { tugas: '📝 Tugas / PR', ulangan: '✏️ Ulangan', kegiatan: '🎉 Kegiatan Sekolah', reminder: '🔔 Pengingat', info: 'ℹ️ Informasi' };
+const BULAN_NAMA_ID = ['','Januari','Februari','Maret','April','Mei','Juni','Juli','Agustus','September','Oktober','November','Desember'];
+
+function formatTanggalIndo(tgl){
+  if (!tgl) return '';
+  var d = new Date(tgl + 'T00:00:00');
+  if (isNaN(d.getTime())) return tgl;
+  return d.getDate() + ' ' + BULAN_NAMA_ID[d.getMonth()+1] + ' ' + d.getFullYear();
+}
+
+function kirimPengumumanWA(id){
+  const p = pengumumanData.find(x => x.id === id);
+  if (!p) return;
+  const prioritasPrefix = { normal: '', penting: '⚠️ *PENTING* ⚠️\n', urgent: '🔴 *URGENT* 🔴\n' };
+  let msg = (prioritasPrefix[p.prioritas] || '') + '📌 *' + p.judul + '*\n';
+  msg += 'Kategori: ' + (KATEGORI_LABEL_WA[p.kategori] || p.kategori) + '\n';
+  msg += 'Tanggal: ' + formatTanggalIndo(p.tanggal) + '\n';
+  if (p.isi) msg += '\n' + p.isi + '\n';
+  msg += '\n_Pengumuman dari Wali Kelas 4 SD_';
+  window.open('https://wa.me/?text=' + encodeURIComponent(msg), '_blank');
+  p.terkirimWA = true;
+  p.terkirimWAAt = Date.now();
+  localStorage.setItem('pengumuman', JSON.stringify(pengumumanData)); saveToFirestore('pengumuman', pengumumanData);
+  renderPengumuman();
+  checkPengumumanReminder();
+}
+
+function checkPengumumanReminder(){
+  const banner = document.getElementById('pengumuman-reminder-banner');
+  if (!banner) return;
+  const belumTerkirim = pengumumanData.filter(p => p.prioritas === 'urgent' && !p.terkirimWA);
+  if (belumTerkirim.length){
+    document.getElementById('pengumuman-reminder-list').innerHTML = belumTerkirim.map(p => '• ' + p.judul).join('<br>');
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function deletePengumuman(id) { pengumumanData = pengumumanData.filter(p => p.id !== id); localStorage.setItem('pengumuman',JSON.stringify(pengumumanData)); saveToFirestore('pengumuman', pengumumanData); renderPengumuman(); checkPengumumanReminder(); }
+function clearPengumuman() { if(!confirm('Hapus semua pengumuman?'))return; pengumumanData=[]; localStorage.setItem('pengumuman','[]'); saveToFirestore('pengumuman', []); renderPengumuman(); checkPengumumanReminder(); }
 
 // REWARD
 function initReward() {
