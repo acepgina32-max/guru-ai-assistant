@@ -513,6 +513,16 @@ body.kiosk-mode .foto-nama{font-size:14px}
       </div>
     </div>
 
+    <div class="card" id="birthday-banner" style="display:none;background:linear-gradient(135deg,#f59e0b,#f97316);border:none;color:#fff;margin-bottom:20px">
+      <div class="card-body" style="padding:16px 20px;display:flex;align-items:center;gap:14px">
+        <div style="font-size:34px;line-height:1">🎉</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px;margin-bottom:2px">Ada yang ulang tahun hari ini!</div>
+          <div id="birthday-names" style="font-size:13px;opacity:0.95;line-height:1.5"></div>
+        </div>
+      </div>
+    </div>
+
     <div class="feature-grid">
       <div class="feature-card" onclick="nav('soal',document.querySelectorAll('.nav-item')[1])">
         <div class="fc-icon">✎</div>
@@ -844,7 +854,7 @@ body.kiosk-mode .foto-nama{font-size:14px}
       <div class="card-head"><h3>◫ Import Data Siswa</h3></div>
       <div class="card-body">
         <div style="background:var(--accent-light);border-radius:8px;padding:13px;font-size:13px;margin-bottom:14px;color:#1d4ed8;line-height:1.7">
-          <strong>Format Excel:</strong> Kolom A = Nama Siswa (wajib) · Kolom B = Nomor Absen · Kolom C = Jenis Kelamin<br>Baris pertama = header, data mulai baris ke-2.
+          <strong>Format Excel:</strong> Kolom A = Nama Siswa (wajib) · B = Nomor Absen · C = Jenis Kelamin · D = Alamat · E = Tempat Tanggal Lahir · F = NISN · G = Nama Orang Tua · H = No HP Orang Tua<br>Baris pertama = header, data mulai baris ke-2.
         </div>
         <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-siswa').click()" ondragover="event.preventDefault();this.style.borderColor='var(--accent)'" ondragleave="this.style.borderColor='var(--border)'" ondrop="dropSiswa(event)">
           <div style="font-size:32px;margin-bottom:8px">◫</div>
@@ -1357,15 +1367,32 @@ body.kiosk-mode .foto-nama{font-size:14px}
 
 <div class="modal-bg" id="add-siswa-modal">
   <div class="modal">
-    <h3>+ Tambah Siswa Manual</h3>
+    <h3 id="siswa-modal-title">+ Tambah Siswa Manual</h3>
+    <input type="hidden" id="manual-edit-index" value="-1"/>
     <div class="fg"><label>Nama Siswa</label><input type="text" id="manual-nama" placeholder="cth: Ahmad Fauzi"/></div>
     <div class="g2">
       <div class="fg"><label>Nomor Absen</label><input type="number" id="manual-absen" placeholder="cth: 1"/></div>
       <div class="fg"><label>Jenis Kelamin</label><select id="manual-jk"><option value="L">Laki-laki</option><option value="P">Perempuan</option></select></div>
     </div>
+    <div class="fg"><label>Alamat</label><input type="text" id="manual-alamat" placeholder="cth: Jl. Merdeka No. 12, Tasikmalaya"/></div>
+    <div class="fg"><label>Tempat, Tanggal Lahir</label><input type="text" id="manual-ttl" placeholder="cth: Tasikmalaya, 12 Januari 2016"/></div>
+    <div class="fg"><label>NISN</label><input type="text" id="manual-nisn" placeholder="cth: 0123456789"/></div>
+    <div class="fg"><label>Nama Orang Tua</label><input type="text" id="manual-ortu" placeholder="cth: Bapak/Ibu ..."/></div>
+    <div class="fg"><label>No. HP Orang Tua (aktif WhatsApp)</label><input type="text" id="manual-hp" placeholder="cth: 081234567890"/></div>
     <div style="display:flex;gap:8px">
       <button class="btn btn-navy" onclick="simpanSiswaManual()" style="flex:1">Simpan</button>
-      <button class="btn btn-ghost" onclick="document.getElementById('add-siswa-modal').classList.remove('show')" style="flex:1">Batal</button>
+      <button class="btn btn-ghost" onclick="closeSiswaModal()" style="flex:1">Batal</button>
+    </div>
+  </div>
+</div>
+
+<div class="modal-bg" id="detail-siswa-modal">
+  <div class="modal">
+    <h3>👤 Detail Siswa</h3>
+    <div id="detail-siswa-body" style="font-size:13px;line-height:2"></div>
+    <div style="display:flex;gap:8px;margin-top:14px">
+      <button class="btn btn-navy" id="detail-siswa-edit-btn" style="flex:1">✎ Edit</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('detail-siswa-modal').classList.remove('show')" style="flex:1">Tutup</button>
     </div>
   </div>
 </div>
@@ -1701,6 +1728,7 @@ async function loadAllDataFromFirestore() {
     const studentsSnap = await db.collection('users').doc(currentUser.uid).collection('students').orderBy('absen').get();
     if (!studentsSnap.empty) {
       students = studentsSnap.docs.map(d => d.data());
+      sortStudentsByAbsen();
     }
   } catch(err) {
     console.error('Load error:', err);
@@ -1763,6 +1791,7 @@ function refreshCurrentPageData() {
   if (pageId === 'reward') initReward();
   if (pageId === 'icebreaking') renderIceFav();
   if (pageId === 'kelas') { checkSiswaKelas(); renderWheel(); }
+  checkBirthdaysToday();
 }
 
 
@@ -2083,6 +2112,56 @@ function makeGroups(){
 }
 
 // STUDENTS
+const BULAN_ID_MAP = {januari:1,februari:2,maret:3,april:4,mei:5,juni:6,juli:7,agustus:8,september:9,oktober:10,november:11,desember:12};
+
+function parseTTLDate(ttl){
+  if (!ttl) return null;
+  var parts = String(ttl).split(',');
+  var datePart = parts[parts.length-1].trim();
+  var m = datePart.match(/(\d{1,2})\s+([A-Za-z]+)\s+(\d{4})/);
+  if (!m) return null;
+  var day = parseInt(m[1], 10);
+  var month = BULAN_ID_MAP[m[2].toLowerCase()];
+  if (!month) return null;
+  return { day: day, month: month };
+}
+
+function checkBirthdaysToday(){
+  var banner = document.getElementById('birthday-banner');
+  if (!banner) return;
+  var today = new Date();
+  var td = today.getDate(), tm = today.getMonth() + 1;
+  var celebrants = [];
+  students.forEach(function(s){
+    var d = parseTTLDate(s.ttl);
+    if (d && d.day === td && d.month === tm) celebrants.push(s.nama);
+  });
+  if (celebrants.length){
+    document.getElementById('birthday-names').textContent = celebrants.join(', ') + ' merayakan ulang tahun hari ini — jangan lupa ucapkan selamat, Bu Via! 🎂';
+    banner.style.display = 'block';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
+function sortStudentsByAbsen(){
+  students.sort(function(a, b){
+    var na = parseFloat(a.absen); if (isNaN(na)) na = 9999;
+    var nb = parseFloat(b.absen); if (isNaN(nb)) nb = 9999;
+    return na - nb;
+  });
+}
+
+function formatPhoneWA(phone){
+  var p = (phone||'').replace(/[^0-9+]/g,'');
+  if (!p) return '';
+  if (p.startsWith('+62')) p = p.slice(1);
+  else if (p.startsWith('62')) { /* already fine */ }
+  else if (p.startsWith('0')) p = '62' + p.slice(1);
+  else p = '62' + p;
+  return p;
+}
+
 function renderStudentGrid(){
   const count=students.length;
   document.getElementById('student-count').textContent=count;
@@ -2091,17 +2170,57 @@ function renderStudentGrid(){
     ?students.map((s,i)=>{
       const initial = s.nama.charAt(0).toUpperCase();
       const photoHtml = s.foto
-        ? `<img src="${s.foto}" style="width:40px;height:40px;border-radius:50%;object-fit:cover;flex-shrink:0"/>`
-        : `<div style="width:40px;height:40px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:14px;flex-shrink:0">${initial}</div>`;
-      return `<div class="s-chip" style="display:flex;align-items:center;gap:8px;text-align:left;padding:6px 10px">
-        ${photoHtml}
-        <span style="flex:1;font-size:12px">${s.absen?s.absen+'. ':''}${s.nama}</span>
-        <label style="cursor:pointer;font-size:14px;padding:4px" title="Upload foto">
-          📷<input type="file" accept="image/*" style="display:none" onchange="uploadSiswaFoto(event,${i})"/>
-        </label>
-      </div>`;
+        ? '<img src="' + s.foto + '" style="width:44px;height:44px;border-radius:50%;object-fit:cover;flex-shrink:0"/>'
+        : '<div style="width:44px;height:44px;border-radius:50%;background:var(--accent-light);color:var(--accent);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:15px;flex-shrink:0">' + initial + '</div>';
+      const waPhone = formatPhoneWA(s.hp);
+      const waBtn = waPhone
+        ? '<a href="https://wa.me/' + waPhone + '?text=' + encodeURIComponent('Assalamu\'alaikum, Bapak/Ibu orang tua dari ' + s.nama + '. Saya Bu Via, wali kelas 4 SD.') + '" target="_blank" rel="noopener" onclick="event.stopPropagation()" style="background:#25D366;color:#fff;border-radius:6px;padding:5px 9px;font-size:11px;font-weight:700;text-decoration:none;white-space:nowrap">💬 WA</a>'
+        : '<span style="font-size:10px;color:var(--text-muted)">No. HP belum diisi</span>';
+      const detailLine = [s.nisn ? 'NISN: ' + s.nisn : '', s.alamat ? s.alamat : ''].filter(Boolean).join(' · ');
+      const ortuLine = s.ortu ? 'Ortu: ' + s.ortu : '';
+      return '<div class="s-chip" onclick="showSiswaDetail(' + i + ')" style="display:flex;flex-direction:column;gap:6px;text-align:left;padding:10px;cursor:pointer">'
+        + '<div style="display:flex;align-items:center;gap:8px">'
+        + photoHtml
+        + '<div style="flex:1;min-width:0">'
+        + '<div style="font-size:13px;font-weight:700;color:var(--text)">' + (s.absen?s.absen+'. ':'') + s.nama + '</div>'
+        + (detailLine ? '<div style="font-size:11px;color:var(--text-sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + detailLine + '</div>' : '')
+        + (ortuLine ? '<div style="font-size:11px;color:var(--text-sub);overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + ortuLine + '</div>' : '')
+        + '</div>'
+        + '<label style="cursor:pointer;font-size:14px;padding:4px" title="Upload foto" onclick="event.stopPropagation()">📷<input type="file" accept="image/*" style="display:none" onchange="uploadSiswaFoto(event,' + i + ')"/></label>'
+        + '</div>'
+        + '<div style="display:flex;gap:6px;align-items:center;justify-content:flex-start">'
+        + waBtn
+        + '</div>'
+        + '</div>';
     }).join('')
     :'<div style="text-align:center;padding:24px;color:var(--text-muted);font-size:13px;grid-column:1/-1">Belum ada data siswa.</div>';
+  checkBirthdaysToday();
+}
+
+function showSiswaDetail(index){
+  const s = students[index];
+  if (!s) return;
+  const waPhone = formatPhoneWA(s.hp);
+  const rows = [
+    ['Nama', s.nama],
+    ['Nomor Absen', s.absen || '-'],
+    ['Jenis Kelamin', s.jk === 'P' ? 'Perempuan' : s.jk === 'L' ? 'Laki-laki' : '-'],
+    ['Alamat', s.alamat || '-'],
+    ['Tempat, Tanggal Lahir', s.ttl || '-'],
+    ['NISN', s.nisn || '-'],
+    ['Nama Orang Tua', s.ortu || '-'],
+    ['No. HP Orang Tua', s.hp || '-']
+  ];
+  let html = rows.map(r => '<div style="display:flex;justify-content:space-between;gap:12px;border-bottom:1px solid var(--border);padding:4px 0"><span style="color:var(--text-sub)">' + r[0] + '</span><span style="font-weight:600;text-align:right">' + r[1] + '</span></div>').join('');
+  if (waPhone) {
+    html += '<div style="margin-top:12px"><a href="https://wa.me/' + waPhone + '?text=' + encodeURIComponent('Assalamu\'alaikum, Bapak/Ibu orang tua dari ' + s.nama + '. Saya Bu Via, wali kelas 4 SD.') + '" target="_blank" rel="noopener" style="display:block;text-align:center;background:#25D366;color:#fff;border-radius:8px;padding:9px;font-size:13px;font-weight:700;text-decoration:none">💬 Chat WhatsApp Orang Tua</a></div>';
+  }
+  document.getElementById('detail-siswa-body').innerHTML = html;
+  document.getElementById('detail-siswa-edit-btn').onclick = function(){
+    document.getElementById('detail-siswa-modal').classList.remove('show');
+    editSiswaManual(index);
+  };
+  document.getElementById('detail-siswa-modal').classList.add('show');
 }
 
 function uploadSiswaFoto(event, index) {
@@ -2137,24 +2256,84 @@ function processSiswaFile(file){
     try{
       const wb=XLSX.read(new Uint8Array(e.target.result),{type:'array'});
       const rows=XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]]);
-      const newS=rows.map((r,i)=>({nama:r['Nama Siswa']||r['nama']||r['NAMA']||Object.values(r)[0]||'',absen:r['Nomor Absen']||r['No']||(i+1),jk:r['Jenis Kelamin']||''})).filter(s=>s.nama);
-      students=[...students,...newS];renderStudentGrid();saveStudentsToFirestore();showToast(`${newS.length} siswa berhasil diimport! ✓`);
+      const newS=rows.map((r,i)=>({
+        nama:r['Nama Siswa']||r['nama']||r['NAMA']||Object.values(r)[0]||'',
+        absen:r['Nomor Absen']||r['No']||(i+1),
+        jk:r['Jenis Kelamin']||'',
+        alamat:r['Alamat']||r['alamat']||'',
+        ttl:r['Tempat Tanggal Lahir']||r['Tempat, Tanggal Lahir']||r['TTL']||'',
+        nisn:r['NISN']||r['nisn']||'',
+        ortu:r['Nama Orang Tua']||r['ortu']||'',
+        hp:String(r['No HP Orang Tua']||r['No. HP Orang Tua']||r['hp']||'').trim()
+      })).filter(s=>s.nama);
+      students=[...students,...newS];
+      sortStudentsByAbsen();
+      renderStudentGrid();saveStudentsToFirestore();showToast(`${newS.length} siswa berhasil diimport! ✓`);
     }catch{showToast('Gagal membaca file.',true);}
   };
   reader.readAsArrayBuffer(file);
 }
 function downloadTemplateSiswa(){
-  const ws=XLSX.utils.json_to_sheet([{'Nama Siswa':'Ahmad Fauzi','Nomor Absen':1,'Jenis Kelamin':'L'},{'Nama Siswa':'Siti Rahayu','Nomor Absen':2,'Jenis Kelamin':'P'}]);
+  const ws=XLSX.utils.json_to_sheet([
+    {'Nama Siswa':'Ahmad Fauzi','Nomor Absen':1,'Jenis Kelamin':'L','Alamat':'Jl. Merdeka No. 12, Tasikmalaya','Tempat Tanggal Lahir':'Tasikmalaya, 12 Januari 2016','NISN':'0123456789','Nama Orang Tua':'Bapak Suherman','No HP Orang Tua':'081234567890'},
+    {'Nama Siswa':'Siti Rahayu','Nomor Absen':2,'Jenis Kelamin':'P','Alamat':'Jl. Kenanga No. 5, Tasikmalaya','Tempat Tanggal Lahir':'Tasikmalaya, 5 Maret 2016','NISN':'0123456788','Nama Orang Tua':'Ibu Rina','No HP Orang Tua':'081298765432'}
+  ]);
   const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,'Daftar Siswa');
   XLSX.writeFile(wb,'Template_DaftarSiswa.xlsx');showToast('Template berhasil didownload!');
 }
-function addSiswaManual(){document.getElementById('add-siswa-modal').classList.add('show');}
+function addSiswaManual(){
+  document.getElementById('manual-edit-index').value='-1';
+  document.getElementById('siswa-modal-title').textContent='+ Tambah Siswa Manual';
+  document.getElementById('manual-nama').value='';
+  document.getElementById('manual-absen').value='';
+  document.getElementById('manual-jk').value='L';
+  document.getElementById('manual-alamat').value='';
+  document.getElementById('manual-ttl').value='';
+  document.getElementById('manual-nisn').value='';
+  document.getElementById('manual-ortu').value='';
+  document.getElementById('manual-hp').value='';
+  document.getElementById('add-siswa-modal').classList.add('show');
+}
+function editSiswaManual(index){
+  const s = students[index];
+  if (!s) return;
+  document.getElementById('manual-edit-index').value=index;
+  document.getElementById('siswa-modal-title').textContent='✎ Edit Data Siswa';
+  document.getElementById('manual-nama').value=s.nama||'';
+  document.getElementById('manual-absen').value=s.absen||'';
+  document.getElementById('manual-jk').value=s.jk||'L';
+  document.getElementById('manual-alamat').value=s.alamat||'';
+  document.getElementById('manual-ttl').value=s.ttl||'';
+  document.getElementById('manual-nisn').value=s.nisn||'';
+  document.getElementById('manual-ortu').value=s.ortu||'';
+  document.getElementById('manual-hp').value=s.hp||'';
+  document.getElementById('add-siswa-modal').classList.add('show');
+}
+function closeSiswaModal(){
+  document.getElementById('add-siswa-modal').classList.remove('show');
+}
 function simpanSiswaManual(){
   const nama=document.getElementById('manual-nama').value.trim();
   if(!nama){showToast('Isi nama siswa!',true);return;}
-  students.push({nama,absen:document.getElementById('manual-absen').value||students.length+1,jk:document.getElementById('manual-jk').value});
-  document.getElementById('add-siswa-modal').classList.remove('show');
-  document.getElementById('manual-nama').value='';renderStudentGrid();saveStudentsToFirestore();showToast(nama+' ditambahkan! ✓');
+  const editIndex = parseInt(document.getElementById('manual-edit-index').value, 10);
+  const data = {
+    nama,
+    absen: document.getElementById('manual-absen').value || (editIndex>=0 ? students[editIndex].absen : students.length+1),
+    jk: document.getElementById('manual-jk').value,
+    alamat: document.getElementById('manual-alamat').value.trim(),
+    ttl: document.getElementById('manual-ttl').value.trim(),
+    nisn: document.getElementById('manual-nisn').value.trim(),
+    ortu: document.getElementById('manual-ortu').value.trim(),
+    hp: document.getElementById('manual-hp').value.trim()
+  };
+  if (editIndex >= 0 && students[editIndex]) {
+    students[editIndex] = { ...students[editIndex], ...data };
+  } else {
+    students.push(data);
+  }
+  sortStudentsByAbsen();
+  closeSiswaModal();
+  renderStudentGrid();saveStudentsToFirestore();showToast(nama+' tersimpan! ✓');
 }
 function clearStudents(){if(!confirm('Hapus semua data siswa?'))return;students=[];renderStudentGrid();deleteAllStudentsFromFirestore();showToast('Data siswa dihapus');}
 
