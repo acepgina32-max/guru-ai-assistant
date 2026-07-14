@@ -2327,8 +2327,8 @@ function clearIceFav() {
 
 // JADWAL
 const HARI = ['Senin','Selasa','Rabu','Kamis','Jumat'];
-const JAM_LIST = ['07.00 - 07.35','07.35 - 08.10','08.10 - 08.45','08.45 - 09.20','09.20 - 09.55','Istirahat','10.10 - 10.45','10.45 - 11.20','11.20 - 11.55'];
-let jadwalData = JSON.parse(localStorage.getItem('jadwal') || '{}');
+const JAM_LIST = ['06.30 - 07.05','07.05 - 07.40','07.40 - 08.15','08.15 - 08.50','08.50 - 09.25','09.25 - 10.00','10.00 - 10.35','10.35 - 11.10','11.10 - 11.45','11.45 - 12.20'];
+let jadwalData = JSON.parse(localStorage.getItem('jadwal') || '{"Senin":{"0":"P. Pancasila","1":"P. Pancasila","2":"P. Pancasila","3":"Matematika","4":"Matematika","5":"Istirahat","6":"B. Indonesia","7":"B. Indonesia","8":"B. Inggris","9":"B. Inggris"},"Selasa":{"0":"IPAS","1":"IPAS","2":"IPAS","3":"Matematika","4":"Matematika","5":"Istirahat","6":"B. Indonesia","7":"B. Indonesia","8":"B. Sunda","9":"B. Sunda"},"Rabu":{"0":"Matematika","1":"Matematika","2":"B. Indonesia","3":"B. Indonesia","4":"B. Indonesia","5":"Istirahat","6":"IPAS","7":"IPAS","8":"IPAS","9":"Pramuka"},"Kamis":{"0":"Seni Budaya","1":"Seni Budaya","2":"PAIBP","3":"PAIBP","4":"PAIBP","5":"Istirahat","6":"PJOK","7":"PJOK","8":"PJOK","9":"PJOK"},"Jumat":{"0":"PAIBP","1":"P. Pancasila","2":"P. Pancasila","3":"Seni Budaya","4":"Istirahat","5":"Seni Budaya"}}');
 let nilaiData = JSON.parse(localStorage.getItem('nilai_siswa') || '{}');
 let absensiData = JSON.parse(localStorage.getItem('absensi') || '{}');
 let pengumumanData = JSON.parse(localStorage.getItem('pengumuman') || '[]');
@@ -2340,14 +2340,13 @@ function initJadwal() {
   if (!tbody) return;
   let rows = '';
   JAM_LIST.forEach(function(jam, i) {
-    if (jam === 'Istirahat') {
-      rows += '<tr style="background:#fef3c7"><td colspan="6" style="padding:7px 12px;font-size:12px;font-weight:700;color:#92400e;text-align:center">Istirahat (09.55 - 10.10)</td></tr>';
-      return;
-    }
     let cols = '<td class="jadwal-cell" style="font-size:11px;color:var(--text-sub);white-space:nowrap">' + jam + '</td>';
     HARI.forEach(function(h) {
       var val = (jadwalData[h] && jadwalData[h][i]) ? jadwalData[h][i] : '';
-      cols += '<td class="jadwal-cell"><input type="text" value="' + val + '" data-hari="' + h + '" data-jam="' + i + '" placeholder="Mapel" onchange="updateJadwalCell(this)"/></td>';
+      var isBreak = val.trim().toLowerCase() === 'istirahat';
+      var tdStyle = isBreak ? 'background:#fef3c7' : '';
+      var inputStyle = isBreak ? 'font-weight:700;color:#92400e;text-align:center' : '';
+      cols += '<td class="jadwal-cell" style="' + tdStyle + '"><input type="text" value="' + val + '" data-hari="' + h + '" data-jam="' + i + '" placeholder="Mapel" onchange="updateJadwalCell(this)" style="' + inputStyle + '"/></td>';
     });
     rows += '<tr>' + cols + '</tr>';
   });
@@ -2360,21 +2359,21 @@ function updateJadwalCell(input) {
   var i = input.dataset.jam;
   if (!jadwalData[h]) jadwalData[h] = {};
   jadwalData[h][i] = input.value;
+  var isBreak = input.value.trim().toLowerCase() === 'istirahat';
+  input.parentElement.style.background = isBreak ? '#fef3c7' : '';
+  input.style.fontWeight = isBreak ? '700' : '';
+  input.style.color = isBreak ? '#92400e' : '';
+  input.style.textAlign = isBreak ? 'center' : '';
 }
 
 function saveJadwal() {
-  // re-read all inputs
-  const rows = document.querySelectorAll('#jadwal-body tr');
-  let ji = 0;
-  rows.forEach(row => {
-    const inputs = row.querySelectorAll('input');
-    if (!inputs.length) return;
-    inputs.forEach((inp, hi) => {
-      const h = HARI[hi];
-      jadwalData[h] = jadwalData[h] || {};
-      jadwalData[h][ji] = inp.value;
-    });
-    ji++;
+  // re-read all inputs using their data-hari/data-jam attributes (not positional counting)
+  const inputs = document.querySelectorAll('#jadwal-body input');
+  inputs.forEach(inp => {
+    const h = inp.dataset.hari;
+    const ji = inp.dataset.jam;
+    jadwalData[h] = jadwalData[h] || {};
+    jadwalData[h][ji] = inp.value;
   });
   localStorage.setItem('jadwal', JSON.stringify(jadwalData)); saveToFirestore('jadwal', jadwalData);
   updateJadwalHariIni();
@@ -2398,9 +2397,13 @@ function updateJadwalHariIni() {
   if (label) label.textContent = today;
   if (!HARI.includes(today)) { el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:16px">Hari ini libur — nikmati akhir pekan Bu Via! 🌸</div>'; return; }
   const todayData = jadwalData[today] || {};
-  const mapelList = Object.values(todayData).filter(v => v && v !== '');
-  if (!mapelList.length) { el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:16px">Jadwal hari ini belum diisi</div>'; return; }
-  el.innerHTML = `<div style="display:flex;flex-wrap:wrap;gap:8px">${mapelList.map((m,i) => `<span class="badge badge-blue" style="font-size:12px;padding:5px 12px">${JAM_LIST.filter(j=>j!=='Istirahat')[i]||''} — ${m}</span>`).join('')}</div>`;
+  const items = [];
+  JAM_LIST.forEach((jam, idx) => {
+    const v = todayData[idx];
+    if (v && v !== '' && v.trim().toLowerCase() !== 'istirahat') items.push('<span class="badge badge-blue" style="font-size:12px;padding:5px 12px">' + jam + ' — ' + v + '</span>');
+  });
+  if (!items.length) { el.innerHTML = '<div style="color:var(--text-muted);text-align:center;padding:16px">Jadwal hari ini belum diisi</div>'; return; }
+  el.innerHTML = '<div style="display:flex;flex-wrap:wrap;gap:8px">' + items.join('') + '</div>';
 }
 
 // NILAI - Format Buku Nilai (Formatif/Sumatif per TP)
