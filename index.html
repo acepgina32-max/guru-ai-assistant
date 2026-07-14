@@ -766,7 +766,15 @@ body.kiosk-mode .foto-nama{font-size:14px}
       <div id="chat-messages" class="chat-messages">
         <div class="bubble-ai">Halo Bu Guru! 👋 Saya siap membantu seputar:<br>• Strategi & metode mengajar<br>• Materi Kurikulum Merdeka<br>• Ide aktivitas & game edukatif<br>• Manajemen kelas & penilaian<br><br>Silakan tanya apa saja! 😊</div>
       </div>
+      <div id="chat-attachment-preview" style="display:none;padding:8px 16px;background:var(--off);border-top:1px solid var(--border);align-items:center;gap:8px">
+        <img id="chat-attachment-thumb" style="width:36px;height:36px;object-fit:cover;border-radius:6px;border:1px solid var(--border)"/>
+        <span id="chat-attachment-name" style="font-size:12px;color:var(--text-sub);flex:1"></span>
+        <button class="btn-sm btn-danger" onclick="removeChatAttachment()">✕</button>
+      </div>
       <div class="chat-input-area">
+        <label style="align-self:flex-end;cursor:pointer;padding:8px;color:var(--text-sub)" title="Lampirkan gambar">
+          📎<input type="file" accept="image/*" style="display:none" onchange="handleChatAttachment(event)"/>
+        </label>
         <textarea id="chat-input" rows="2" placeholder="Ketik pertanyaan... (Enter untuk kirim, Shift+Enter untuk baris baru)"></textarea>
         <button class="btn btn-navy" onclick="sendChat()" style="align-self:flex-end">Kirim</button>
       </div>
@@ -1321,6 +1329,16 @@ body.kiosk-mode .foto-nama{font-size:14px}
           </div>
         </div>
         <div class="fg"><label>Isi Pengumuman</label><textarea id="pg-isi" rows="3" placeholder="Detail pengumuman..."></textarea></div>
+        <div class="fg">
+          <label>Lampiran Gambar (opsional)</label>
+          <input type="file" id="pg-lampiran-input" accept="image/*" onchange="handlePengumumanLampiran(event)"/>
+          <div style="font-size:11px;color:var(--text-muted);margin-top:4px">Catatan: WhatsApp tidak bisa menerima lampiran otomatis lewat link — gambar ini tersimpan di aplikasi dan bisa didownload untuk dikirim manual di WA.</div>
+          <div id="pg-lampiran-preview" style="display:none;margin-top:8px;align-items:center;gap:8px">
+            <img id="pg-lampiran-thumb" style="width:50px;height:50px;object-fit:cover;border-radius:6px;border:1px solid var(--border)"/>
+            <span id="pg-lampiran-name" style="font-size:12px;color:var(--text-sub);flex:1"></span>
+            <button class="btn-sm btn-danger" onclick="removePengumumanLampiran()">✕</button>
+          </div>
+        </div>
         <button class="btn btn-navy btn-full" onclick="addPengumuman()">📌 Tambah Pengumuman</button>
       </div>
     </div>
@@ -1701,7 +1719,14 @@ function flushOneSave(key) {
   return db.collection('users').doc(currentUser.uid).collection('data').doc(key)
     .set({ value: JSON.stringify(data), updatedAt: firebase.firestore.FieldValue.serverTimestamp() })
     .then(() => { if (Object.keys(pendingSaves).length === 0) setSyncStatus(false); })
-    .catch(err => { console.error('Sync error:', err); setSyncStatus(false); });
+    .catch(err => {
+      console.error('Sync error:', err);
+      setSyncStatus(false);
+      const isTooLarge = err && err.message && (err.message.includes('longer than') || err.message.includes('1048487') || err.code === 'invalid-argument');
+      showToast(isTooLarge
+        ? 'Gagal sync: data "' + key + '" kelebihan ukuran (kemungkinan terlalu banyak lampiran gambar). Coba hapus lampiran/pengumuman lama.'
+        : 'Gagal sinkron "' + key + '" ke cloud. Cek koneksi internet.', true);
+    });
 }
 
 function flushAllPendingSaves() {
@@ -1991,11 +2016,63 @@ async function generateCerita(){
 }
 
 // CHAT
+let pendingChatAttachment = null;
+
+function handleChatAttachment(event){
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      const canvas = document.createElement('canvas');
+      const maxDim = 1280;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        w = Math.round(w * scale); h = Math.round(h * scale);
+      }
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.75);
+      pendingChatAttachment = { name: file.name, mediaType: 'image/jpeg', base64: dataUrl.split(',')[1] };
+      document.getElementById('chat-attachment-thumb').src = dataUrl;
+      document.getElementById('chat-attachment-name').textContent = file.name;
+      document.getElementById('chat-attachment-preview').style.display = 'flex';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+  event.target.value = '';
+}
+
+function removeChatAttachment(){
+  pendingChatAttachment = null;
+  const prev = document.getElementById('chat-attachment-preview');
+  if (prev) prev.style.display = 'none';
+}
+
 async function sendChat(){
   const input=document.getElementById('chat-input'),msg=input.value.trim();
-  if(!msg)return;
-  addBubble(msg,'user');input.value='';
-  chatHistory.push({role:'user',content:msg});
+  const attachment = pendingChatAttachment;
+  if(!msg && !attachment)return;
+
+  let apiContent, historyText;
+  if (attachment) {
+    apiContent = [
+      { type: 'image', source: { type: 'base64', media_type: attachment.mediaType, data: attachment.base64 } },
+      { type: 'text', text: msg || 'Tolong lihat dan tanggapi gambar ini.' }
+    ];
+    historyText = (msg ? msg + ' ' : '') + '[📷 Lampiran: ' + attachment.name + ']';
+  } else {
+    apiContent = msg;
+    historyText = msg;
+  }
+  addBubble(historyText,'user');
+  input.value='';
+  removeChatAttachment();
+  chatHistory.push({role:'user',content:historyText});
   saveChatHistory();
   addBubble('...','ai','typing');
   try{
@@ -2003,7 +2080,8 @@ async function sendChat(){
     if(teacherProfile && teacherProfile.trim()){
       sysPrompt += '\n\nBerikut konteks tentang guru yang kamu ajak bicara (Bu Via), hasil rangkuman dari obrolan-obrolan sebelumnya. Gunakan ini untuk menyesuaikan gaya, contoh, dan rekomendasimu supaya terasa personal dan relevan dengan cara mengajarnya:\n' + teacherProfile;
     }
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:2048,output_config:{effort:'low'},system:sysPrompt,messages:chatHistory})});
+    const messagesForApi = chatHistory.slice(0, -1).concat([{role:'user', content: apiContent}]);
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','x-api-key':apiKey,'anthropic-version':'2023-06-01','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-5',max_tokens:2048,output_config:{effort:'low'},system:sysPrompt,messages:messagesForApi})});
     const data=await res.json();
     if(data.error){document.getElementById('typing')?.remove();addBubble('Error: '+data.error.message,'ai');chatHistory.pop();saveChatHistory();return;}
     const chatTextBlock=data.content?.find(c=>c.type==='text');
@@ -3178,6 +3256,42 @@ function exportRekapBulanan() {
 
 
 // PENGUMUMAN
+let pendingPengumumanLampiran = null;
+
+function handlePengumumanLampiran(event){
+  const file = event.target.files[0];
+  if (!file) return;
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const img = new Image();
+    img.onload = function(){
+      const canvas = document.createElement('canvas');
+      const maxDim = 1000;
+      let w = img.width, h = img.height;
+      if (w > maxDim || h > maxDim) {
+        const scale = maxDim / Math.max(w, h);
+        w = Math.round(w * scale); h = Math.round(h * scale);
+      }
+      canvas.width = w; canvas.height = h;
+      const ctx = canvas.getContext('2d');
+      ctx.drawImage(img, 0, 0, w, h);
+      const dataUrl = canvas.toDataURL('image/jpeg', 0.7);
+      pendingPengumumanLampiran = { name: file.name, dataUrl };
+      document.getElementById('pg-lampiran-thumb').src = dataUrl;
+      document.getElementById('pg-lampiran-name').textContent = file.name;
+      document.getElementById('pg-lampiran-preview').style.display = 'flex';
+    };
+    img.src = e.target.result;
+  };
+  reader.readAsDataURL(file);
+}
+
+function removePengumumanLampiran(){
+  pendingPengumumanLampiran = null;
+  document.getElementById('pg-lampiran-preview').style.display = 'none';
+  document.getElementById('pg-lampiran-input').value = '';
+}
+
 function addPengumuman() {
   const judul = document.getElementById('pg-judul').value.trim();
   if (!judul) { showToast('Isi judul pengumuman!', true); return; }
@@ -3187,6 +3301,8 @@ function addPengumuman() {
     kategori: document.getElementById('pg-kategori').value,
     prioritas: document.getElementById('pg-prioritas').value,
     isi: document.getElementById('pg-isi').value,
+    lampiran: pendingPengumumanLampiran ? pendingPengumumanLampiran.dataUrl : null,
+    lampiranNama: pendingPengumumanLampiran ? pendingPengumumanLampiran.name : null,
     terkirimWA: false,
     terkirimWAAt: null
   });
@@ -3194,6 +3310,7 @@ function addPengumuman() {
   renderPengumuman();
   document.getElementById('pg-judul').value = '';
   document.getElementById('pg-isi').value = '';
+  removePengumumanLampiran();
   showToast('Pengumuman ditambahkan! ✓');
 }
 
@@ -3209,6 +3326,10 @@ function renderPengumuman() {
           <div style="font-weight:700;font-size:14px;margin-bottom:3px">${priorityIcon[p.prioritas]||''}${p.judul}</div>
           <div style="font-size:11px;color:var(--text-sub);margin-bottom:5px">${p.tanggal} • ${p.kategori}</div>
           ${p.isi ? `<div style="font-size:13px;color:var(--text);line-height:1.6">${p.isi}</div>` : ''}
+          ${p.lampiran ? `<div style="margin-top:8px;display:flex;align-items:center;gap:8px">
+            <img src="${p.lampiran}" style="width:60px;height:60px;object-fit:cover;border-radius:6px;border:1px solid var(--border);cursor:pointer" onclick="window.open('${p.lampiran}','_blank')"/>
+            <button class="btn btn-ghost btn-sm" onclick="downloadPengumumanLampiran(${p.id})" style="font-size:11px">⬇ Download Lampiran</button>
+          </div>` : ''}
           ${p.terkirimWA ? `<div style="font-size:11px;color:#16a34a;margin-top:6px;font-weight:600">✓ Terkirim ke WA · ${formatWaktuKirim(p.terkirimWAAt)}</div>` : ''}
         </div>
         <button class="btn-sm btn-danger" onclick="deletePengumuman(${p.id})" style="flex-shrink:0">✕</button>
@@ -3217,6 +3338,15 @@ function renderPengumuman() {
         <button class="btn btn-sm" onclick="kirimPengumumanWA(${p.id})" style="background:#25D366;color:#fff;font-size:11px;padding:6px 10px">💬 ${p.terkirimWA ? 'Kirim Ulang ke WA' : 'Kirim ke Grup WA'}</button>
       </div>
     </div>`).join('');
+}
+
+function downloadPengumumanLampiran(id){
+  const p = pengumumanData.find(x => x.id === id);
+  if (!p || !p.lampiran) return;
+  const a = document.createElement('a');
+  a.href = p.lampiran;
+  a.download = p.lampiranNama || ('lampiran_' + id + '.jpg');
+  a.click();
 }
 
 function formatWaktuKirim(ts){
@@ -3345,6 +3475,13 @@ function resetAllReward() {
 
 
 // ── LKPD GENERATOR ────────────────────────────────────────────
+function withTeacherProfileContext(baseSystem){
+  if (teacherProfile && teacherProfile.trim()) {
+    return baseSystem + '\n\nKonteks tambahan tentang gaya mengajar Bu Via (rangkuman dari histori AI Chat) — gunakan untuk menyesuaikan pendekatan, jenis kegiatan, dan gaya konten supaya sesuai preferensinya, tanpa mengabaikan spesifikasi yang diminta di atas:\n' + teacherProfile;
+  }
+  return baseSystem;
+}
+
 async function generateLKPD() {
   const mapel = document.getElementById('lkpd-mapel').value;
   const topik = document.getElementById('lkpd-topik').value.trim();
@@ -3408,7 +3545,7 @@ Buatkan LKPD dalam format JSON dengan struktur TEPAT seperti ini (jangan ada tek
   "refleksi": ["pertanyaan refleksi 1?", "pertanyaan refleksi 2?"]
 }`;
 
-  const system = 'Kamu adalah guru SD berpengalaman ahli membuat LKPD Kurikulum Merdeka. Kembalikan HANYA JSON valid tanpa markdown, tanpa penjelasan, tanpa backtick. Pastikan JSON dapat di-parse langsung.';
+  const system = withTeacherProfileContext('Kamu adalah guru SD berpengalaman ahli membuat LKPD Kurikulum Merdeka. Kembalikan HANYA JSON valid tanpa markdown, tanpa penjelasan, tanpa backtick. Pastikan JSON dapat di-parse langsung.');
   const result = await callClaude(prompt, system);
 
   if (!result) {
