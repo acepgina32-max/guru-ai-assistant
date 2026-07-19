@@ -458,20 +458,21 @@ body.kiosk-mode .foto-nama{font-size:14px}
   <div class="nav-item" onclick="nav('soal',this)"><span class="ni">✎</span> Buat Soal</div>
   <div class="nav-item" onclick="nav('rpp',this)"><span class="ni">≡</span> RPP & Modul Ajar</div>
   <div class="nav-item" onclick="nav('cerita',this)"><span class="ni">✦</span> Cerita Edukatif</div>
-  <div class="nav-item" onclick="nav('chat',this)"><span class="ni">◎</span> AI Chat</div>
+  <div class="nav-item" onclick="nav('chat',this)"><span class="ni">◎</span> AI Assistant</div>
   <div class="nav-item" onclick="nav('lkpd',this)"><span class="ni">◈</span> LKPD Generator</div>
   <div class="nav-item" onclick="nav('icebreaking',this)"><span class="ni">🧊</span> Ice Breaking</div>
 
   <div class="sidebar-section">Alat Kelas</div>
   <div class="nav-item" onclick="nav('kelas',this);setTimeout(()=>switchKelas('wheel'),100)"><span class="ni">◉</span> Roda Nama</div>
   <div class="nav-item" onclick="nav('kelas',this);setTimeout(()=>switchKelas('timer'),100)"><span class="ni">◷</span> Timer Kelas</div>
-  <div class="nav-item" onclick="nav('kelas',this);setTimeout(()=>switchKelas('group'),100)"><span class="ni">⊕</span> Buat Kelompok</div>
+  <div class="nav-item" onclick="nav('kelas',this);setTimeout(()=>switchKelas('group'),100)"><span class="ni">⊕</span> Kelompok Belajar</div>
 
   <div class="sidebar-section">Data</div>
   <div class="nav-item" onclick="nav('siswa',this)"><span class="ni">◫</span> Data Siswa</div>
 
   <div class="sidebar-section">Teacher Desk</div>
   <div class="nav-item" onclick="nav('jadwal',this)"><span class="ni">📅</span> Jadwal Pelajaran</div>
+  <div class="nav-item" onclick="nav('organisasi',this)"><span class="ni">🏛️</span> Struktur Organisasi</div>
   <div class="nav-item" onclick="nav('nilai',this)"><span class="ni">📊</span> Nilai Siswa</div>
   <div class="nav-item" onclick="nav('absensi',this)"><span class="ni">✅</span> Absensi</div>
   <div class="nav-item" onclick="nav('pengumuman',this)"><span class="ni">📌</span> Papan Pengumuman</div>
@@ -494,6 +495,7 @@ body.kiosk-mode .foto-nama{font-size:14px}
       </div>
     </div>
     <div style="display:flex;align-items:center;gap:10px">
+      <button id="sound-toggle-btn" onclick="toggleSoundMute()" title="Nyalakan/matikan suara notifikasi" style="background:none;border:1px solid var(--border);border-radius:8px;padding:5px 9px;cursor:pointer;font-size:14px"></button>
       <div id="student-count-badge" style="font-size:12px;color:var(--text-sub)">0 siswa</div>
       <div id="topbar-date" style="font-size:12px;color:var(--text-sub)"></div>
     </div>
@@ -530,90 +532,107 @@ body.kiosk-mode .foto-nama{font-size:14px}
           <div style="font-weight:700;font-size:14px;margin-bottom:2px">Ada pengumuman urgent yang belum dikirim ke grup WA!</div>
           <div id="pengumuman-reminder-list" style="font-size:13px;opacity:0.95;line-height:1.5"></div>
         </div>
-        <button class="btn btn-ghost btn-sm" onclick="nav('pengumuman',document.querySelectorAll('.nav-item')[13])" style="background:rgba(255,255,255,0.2);color:#fff;border-color:rgba(255,255,255,0.4);flex-shrink:0;font-size:11px">Buka →</button>
+        <button class="btn btn-ghost btn-sm" onclick="nav('pengumuman',getNavItemByPage('pengumuman'))" style="background:rgba(255,255,255,0.2);color:#fff;border-color:rgba(255,255,255,0.4);flex-shrink:0;font-size:11px">Buka →</button>
+      </div>
+    </div>
+
+    <div class="card" id="absensi-reminder-banner" style="display:none;background:linear-gradient(135deg,#2563eb,#1d4ed8);border:none;color:#fff;margin-bottom:20px">
+      <div class="card-body" style="padding:16px 20px;display:flex;align-items:center;gap:14px">
+        <div style="font-size:34px;line-height:1">✅</div>
+        <div style="flex:1">
+          <div style="font-weight:700;font-size:14px;margin-bottom:2px">Absensi hari ini belum diisi!</div>
+          <div style="font-size:13px;opacity:0.95;line-height:1.5">Jangan lupa isi kehadiran siswa untuk hari ini ya, Bu Via.</div>
+        </div>
+        <button class="btn btn-ghost btn-sm" onclick="nav('absensi',getNavItemByPage('absensi'))" style="background:rgba(255,255,255,0.2);color:#fff;border-color:rgba(255,255,255,0.4);flex-shrink:0;font-size:11px">Isi Sekarang →</button>
       </div>
     </div>
 
     <div class="feature-grid">
-      <div class="feature-card" onclick="nav('soal',document.querySelectorAll('.nav-item')[1])">
+      <div class="feature-card" onclick="nav('soal',getNavItemByPage('soal'))">
         <div class="fc-icon">✎</div>
         <div class="fc-title">Buat Soal</div>
         <div class="fc-sub">PG, Essay, Isian otomatis</div>
         <span class="fc-tag badge badge-blue">AI</span>
       </div>
-      <div class="feature-card" onclick="nav('rpp',document.querySelectorAll('.nav-item')[2])">
+      <div class="feature-card" onclick="nav('rpp',getNavItemByPage('rpp'))">
         <div class="fc-icon">≡</div>
         <div class="fc-title">RPP & Modul Ajar</div>
         <div class="fc-sub">Kurikulum Merdeka</div>
         <span class="fc-tag badge badge-blue">AI</span>
       </div>
-      <div class="feature-card" onclick="nav('cerita',document.querySelectorAll('.nav-item')[3])">
+      <div class="feature-card" onclick="nav('cerita',getNavItemByPage('cerita'))">
         <div class="fc-icon">✦</div>
         <div class="fc-title">Cerita Edukatif</div>
         <div class="fc-sub">Dongeng, narasi, puisi</div>
         <span class="fc-tag badge badge-blue">AI</span>
       </div>
-      <div class="feature-card" onclick="nav('chat',document.querySelectorAll('.nav-item')[4])">
+      <div class="feature-card" onclick="nav('chat',getNavItemByPage('chat'))">
         <div class="fc-icon">◎</div>
-        <div class="fc-title">AI Chat</div>
+        <div class="fc-title">AI Assistant</div>
         <div class="fc-sub">Konsultasi mengajar</div>
         <span class="fc-tag badge badge-blue">AI</span>
       </div>
-      <div class="feature-card" onclick="nav('kelas',document.querySelectorAll('.nav-item')[5]);setTimeout(()=>switchKelas('wheel'),100)">
+      <div class="feature-card" onclick="nav('kelas',getNavItemByPage('kelas'));setTimeout(()=>switchKelas('wheel'),100)">
         <div class="fc-icon">◉</div>
         <div class="fc-title">Roda Nama</div>
         <div class="fc-sub">Pilih siswa secara acak</div>
         <span class="fc-tag badge badge-green">Gratis</span>
       </div>
-      <div class="feature-card" onclick="nav('kelas',document.querySelectorAll('.nav-item')[6]);setTimeout(()=>switchKelas('timer'),100)">
+      <div class="feature-card" onclick="nav('kelas',getNavItemByPage('kelas'));setTimeout(()=>switchKelas('timer'),100)">
         <div class="fc-icon">◷</div>
         <div class="fc-title">Timer Kelas</div>
         <div class="fc-sub">Hitung mundur interaktif</div>
         <span class="fc-tag badge badge-green">Gratis</span>
       </div>
-      <div class="feature-card" onclick="nav('kelas',document.querySelectorAll('.nav-item')[7]);setTimeout(()=>switchKelas('group'),100)">
+      <div class="feature-card" onclick="nav('kelas',getNavItemByPage('kelas'));setTimeout(()=>switchKelas('group'),100)">
         <div class="fc-icon">⊕</div>
-        <div class="fc-title">Buat Kelompok</div>
-        <div class="fc-sub">Pembagian kelompok acak</div>
+        <div class="fc-title">Kelompok Belajar</div>
+        <div class="fc-sub">Kelompok resmi & pembagian acak</div>
         <span class="fc-tag badge badge-green">Gratis</span>
       </div>
-      <div class="feature-card" onclick="nav('siswa',document.querySelectorAll('.nav-item')[9])">
+      <div class="feature-card" onclick="nav('siswa',getNavItemByPage('siswa'))">
         <div class="fc-icon">◫</div>
         <div class="fc-title">Data Siswa</div>
         <div class="fc-sub">Import dari Excel</div>
         <span class="fc-tag badge badge-navy">Excel</span>
       </div>
-      <div class="feature-card" onclick="nav('lkpd',document.querySelectorAll('.nav-item')[10])">
+      <div class="feature-card" onclick="nav('lkpd',getNavItemByPage('lkpd'))">
         <div class="fc-icon">◈</div>
         <div class="fc-title">LKPD Generator</div>
         <div class="fc-sub">Buat & print LKPD digital</div>
         <span class="fc-tag badge badge-blue">AI + Print</span>
       </div>
-      <div class="feature-card" onclick="nav('icebreaking',document.querySelectorAll('.nav-item')[11])">
+      <div class="feature-card" onclick="nav('icebreaking',getNavItemByPage('icebreaking'))">
         <div class="fc-icon">🧊</div>
         <div class="fc-title">Ice Breaking</div>
         <div class="fc-sub">Aktivitas pembuka kelas</div>
         <span class="fc-tag badge badge-blue">AI</span>
       </div>
-      <div class="feature-card" onclick="nav('jadwal',document.querySelectorAll('.nav-item')[12])">
+      <div class="feature-card" onclick="nav('jadwal',getNavItemByPage('jadwal'))">
         <div class="fc-icon">📅</div>
         <div class="fc-title">Jadwal Pelajaran</div>
         <div class="fc-sub">Jadwal harian kelas 4</div>
         <span class="fc-tag badge badge-navy">Desk</span>
       </div>
-      <div class="feature-card" onclick="nav('nilai',document.querySelectorAll('.nav-item')[13])">
+      <div class="feature-card" onclick="nav('organisasi',getNavItemByPage('organisasi'))">
+        <div class="fc-icon">🏛️</div>
+        <div class="fc-title">Struktur Organisasi</div>
+        <div class="fc-sub">Ketua, sekretaris, bendahara, dll</div>
+        <span class="fc-tag badge badge-navy">Desk</span>
+      </div>
+      <div class="feature-card" onclick="nav('nilai',getNavItemByPage('nilai'))">
         <div class="fc-icon">📊</div>
         <div class="fc-title">Nilai Siswa</div>
         <div class="fc-sub">Input & rata-rata nilai</div>
         <span class="fc-tag badge badge-navy">Desk</span>
       </div>
-      <div class="feature-card" onclick="nav('absensi',document.querySelectorAll('.nav-item')[14])">
+      <div class="feature-card" onclick="nav('absensi',getNavItemByPage('absensi'))">
         <div class="fc-icon">✅</div>
         <div class="fc-title">Absensi</div>
         <div class="fc-sub">Rekap kehadiran harian</div>
         <span class="fc-tag badge badge-green">Desk</span>
       </div>
-      <div class="feature-card" onclick="nav('reward',document.querySelectorAll('.nav-item')[16])">
+      <div class="feature-card" onclick="nav('reward',getNavItemByPage('reward'))">
         <div class="fc-icon">🏆</div>
         <div class="fc-title">Poin Reward</div>
         <div class="fc-sub">Bintang & poin siswa</div>
@@ -747,7 +766,7 @@ body.kiosk-mode .foto-nama{font-size:14px}
   <div id="page-chat" class="page">
     <div class="chat-wrap">
       <div class="chat-header">
-        <h3>◎ AI Chat — Asisten Guru</h3>
+        <h3>◎ AI Assistant — Asisten Guru</h3>
         <p>Tanya apapun seputar mengajar, kurikulum, atau pengelolaan kelas</p>
       </div>
       <div style="padding:10px 16px;background:var(--accent-light);border-bottom:1px solid var(--border)">
@@ -756,7 +775,7 @@ body.kiosk-mode .foto-nama{font-size:14px}
           <span id="profil-toggle-icon" style="font-size:12px;color:#1d4ed8">▾ Lihat</span>
         </div>
         <div id="profil-panel" style="display:none;margin-top:8px">
-          <div id="profil-text" style="font-size:12px;color:var(--text-sub);line-height:1.6;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;white-space:pre-wrap">Belum ada profil. Mengobrol beberapa kali dulu dengan AI Chat, lalu klik "Perbarui Profil" supaya AI mulai mengenali gaya mengajar Bu Via.</div>
+          <div id="profil-text" style="font-size:12px;color:var(--text-sub);line-height:1.6;background:#fff;border:1px solid var(--border);border-radius:8px;padding:10px;margin-bottom:8px;white-space:pre-wrap">Belum ada profil. Mengobrol beberapa kali dulu dengan AI Assistant, lalu klik "Perbarui Profil" supaya AI mulai mengenali gaya mengajar Bu Via.</div>
           <div style="display:flex;gap:6px">
             <button class="btn btn-ghost btn-sm" onclick="updateTeacherProfile()" style="flex:1;font-size:11px">🔄 Perbarui Profil dari Riwayat Chat</button>
             <button class="btn btn-ghost btn-sm" onclick="clearChatHistory()" style="font-size:11px">🗑️ Reset Riwayat</button>
@@ -794,7 +813,7 @@ body.kiosk-mode .foto-nama{font-size:14px}
     <div class="itabs">
       <button class="itab active" id="tab-wheel" onclick="switchKelas('wheel')">◉ Roda Nama</button>
       <button class="itab" id="tab-timer" onclick="switchKelas('timer')">◷ Timer Kelas</button>
-      <button class="itab" id="tab-group" onclick="switchKelas('group')">⊕ Buat Kelompok</button>
+      <button class="itab" id="tab-group" onclick="switchKelas('group')">⊕ Kelompok Belajar</button>
     </div>
 
     <!-- WHEEL -->
@@ -805,7 +824,7 @@ body.kiosk-mode .foto-nama{font-size:14px}
           <div id="no-siswa-wheel" style="text-align:center;padding:28px;color:var(--text-sub);display:none">
             <div style="font-size:36px;margin-bottom:10px">◫</div>
             <div style="font-weight:600;margin-bottom:4px">Belum ada data siswa</div>
-            <div style="font-size:13px">Import data siswa terlebih dahulu di menu <a href="#" onclick="nav('siswa',document.querySelectorAll('.nav-item')[9])" style="color:var(--accent)">Data Siswa</a></div>
+            <div style="font-size:13px">Import data siswa terlebih dahulu di menu <a href="#" onclick="nav('siswa',getNavItemByPage('siswa'))" style="color:var(--accent)">Data Siswa</a></div>
           </div>
           <div class="wheel-area" id="wheel-area">
             <div class="wheel-wrap">
@@ -855,12 +874,21 @@ body.kiosk-mode .foto-nama{font-size:14px}
     <!-- GROUP -->
     <div id="kelas-group" class="isec">
       <div class="card">
-        <div class="card-head"><h3>⊕ Pembuat Kelompok Otomatis</h3></div>
+        <div class="card-head">
+          <h3>📋 Kelompok Belajar Resmi</h3>
+          <button class="btn btn-ghost btn-sm" onclick="tambahKelompokResmi()">+ Tambah Kelompok</button>
+        </div>
+        <div class="card-body">
+          <div id="kelompok-resmi-list"></div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-head"><h3>⊕ Pembuat Kelompok Otomatis (Acak)</h3></div>
         <div class="card-body">
           <div id="no-siswa-group" style="text-align:center;padding:28px;color:var(--text-sub);display:none">
             <div style="font-size:36px;margin-bottom:10px">◫</div>
             <div style="font-weight:600;margin-bottom:4px">Belum ada data siswa</div>
-            <div style="font-size:13px">Import data siswa di menu <a href="#" onclick="nav('siswa',document.querySelectorAll('.nav-item')[9])" style="color:var(--accent)">Data Siswa</a> terlebih dahulu</div>
+            <div style="font-size:13px">Import data siswa di menu <a href="#" onclick="nav('siswa',getNavItemByPage('siswa'))" style="color:var(--accent)">Data Siswa</a> terlebih dahulu</div>
           </div>
           <div id="group-content">
             <div class="g3">
@@ -1121,6 +1149,12 @@ body.kiosk-mode .foto-nama{font-size:14px}
 
   <!-- JADWAL PELAJARAN -->
   <div id="page-jadwal" class="page">
+    <div class="itabs">
+      <button class="itab active" id="tab-jadwal-pelajaran" onclick="switchJadwalTab('pelajaran')">📚 Pelajaran</button>
+      <button class="itab" id="tab-jadwal-piket" onclick="switchJadwalTab('piket')">🧹 Piket</button>
+    </div>
+
+    <div id="jadwal-pelajaran-sec" class="isec active">
     <div class="card">
       <div class="card-head"><h3>📅 Jadwal Pelajaran Kelas 4</h3></div>
       <div class="card-body">
@@ -1148,6 +1182,58 @@ body.kiosk-mode .foto-nama{font-size:14px}
     <div class="card">
       <div class="card-head"><h3>📋 Jadwal Hari Ini</h3><span id="hari-ini-label" style="font-size:12px;color:var(--text-sub)"></span></div>
       <div id="jadwal-hari-ini" class="card-body" style="font-size:13px"></div>
+    </div>
+    </div>
+
+    <div id="jadwal-piket-sec" class="isec">
+      <div class="card">
+        <div class="card-head"><h3>🧹 Jadwal Piket Kelas</h3></div>
+        <div class="card-body">
+          <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px">
+            <div class="fg"><label>Senin</label><textarea id="piket-Senin" rows="6" placeholder="Satu nama per baris"></textarea></div>
+            <div class="fg"><label>Selasa</label><textarea id="piket-Selasa" rows="6" placeholder="Satu nama per baris"></textarea></div>
+            <div class="fg"><label>Rabu</label><textarea id="piket-Rabu" rows="6" placeholder="Satu nama per baris"></textarea></div>
+            <div class="fg"><label>Kamis</label><textarea id="piket-Kamis" rows="6" placeholder="Satu nama per baris"></textarea></div>
+            <div class="fg"><label>Jumat</label><textarea id="piket-Jumat" rows="6" placeholder="Satu nama per baris"></textarea></div>
+          </div>
+          <button class="btn btn-navy btn-full" onclick="savePiket()" style="margin-top:14px">💾 Simpan Jadwal Piket</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- STRUKTUR ORGANISASI -->
+  <div id="page-organisasi" class="page">
+    <div class="card">
+      <div class="card-head"><h3>🏛️ Edit Struktur Organisasi Kelas</h3></div>
+      <div class="card-body">
+        <div class="g2">
+          <div class="fg"><label>Wali Kelas</label><input type="text" id="org-wali"/></div>
+          <div class="fg"><label>Ketua Kelas</label><input type="text" id="org-ketua"/></div>
+        </div>
+        <div class="g2">
+          <div class="fg"><label>Wakil Ketua Kelas</label><input type="text" id="org-wakil"/></div>
+          <div class="fg"><label>Anggota</label><input type="text" id="org-anggota" placeholder="cth: Semua warga kelas 4A"/></div>
+        </div>
+        <div class="g2">
+          <div class="fg"><label>Sekretaris</label><input type="text" id="org-sekretaris"/></div>
+          <div class="fg"><label>Bendahara</label><input type="text" id="org-bendahara"/></div>
+        </div>
+        <div class="g2">
+          <div class="fg"><label>Wakil Sekretaris</label><input type="text" id="org-wsekretaris"/></div>
+          <div class="fg"><label>Wakil Bendahara</label><input type="text" id="org-wbendahara"/></div>
+        </div>
+        <div class="fg"><label>Seksi Kebersihan (pisahkan dengan koma jika lebih dari satu)</label><input type="text" id="org-kebersihan"/></div>
+        <div class="fg"><label>Seksi Keamanan (pisahkan dengan koma jika lebih dari satu)</label><input type="text" id="org-keamanan"/></div>
+        <button class="btn btn-navy btn-full" onclick="saveOrganisasi()">💾 Simpan Struktur Organisasi</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-head"><h3>🏛️ Struktur Organisasi Kelas IV-A</h3></div>
+      <div class="card-body">
+        <div id="org-preview" style="text-align:center;line-height:2.1;font-size:14px"></div>
+      </div>
     </div>
   </div>
 
@@ -1439,6 +1525,19 @@ body.kiosk-mode .foto-nama{font-size:14px}
   </div>
 </div>
 
+<div class="modal-bg" id="kelompok-modal">
+  <div class="modal">
+    <h3 id="kelompok-modal-title">+ Tambah Kelompok</h3>
+    <input type="hidden" id="kelompok-edit-id" value="-1"/>
+    <div class="fg"><label>Nama Kelompok</label><input type="text" id="kelompok-nama-input" placeholder="cth: Kelompok 1"/></div>
+    <div class="fg"><label>Anggota (satu nama per baris)</label><textarea id="kelompok-anggota-input" rows="8" placeholder="Nama siswa 1&#10;Nama siswa 2&#10;..."></textarea></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-navy" onclick="simpanKelompokResmi()" style="flex:1">Simpan</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('kelompok-modal').classList.remove('show')" style="flex:1">Batal</button>
+    </div>
+  </div>
+</div>
+
 <div class="modal-bg" id="pin-modal">
   <div class="modal">
     <h3>🔒 Atur PIN Mode Kiosk</h3>
@@ -1617,7 +1716,7 @@ function isKioskMode() {
 function enterKioskMode() {
   localStorage.setItem('kiosk_active', 'true');
   document.body.classList.add('kiosk-mode');
-  nav('absensi', document.querySelectorAll('.nav-item')[7]);
+  nav('absensi', getNavItemByPage('absensi'));
   setTimeout(() => {
     switchAbsenTab('foto');
     applyKioskFunUI();
@@ -1827,6 +1926,9 @@ function applyLoadedData(key, data) {
     case 'kiosk_pin': if (data) localStorage.setItem('kiosk_pin', data); break;
     case 'chat_history': chatHistory = data || []; renderChatHistoryBubbles(); break;
     case 'teacher_profile': teacherProfile = data || ''; renderProfilPanel(); break;
+    case 'kelompok_resmi': kelompokResmiData = data || []; renderKelompokResmi(); break;
+    case 'organisasi': organisasiData = data || organisasiData; renderOrganisasiForm(); break;
+    case 'piket': piketData = data || piketData; if (document.getElementById('jadwal-piket-sec')?.classList.contains('active')) renderPiketForm(); break;
     case 'api_key': if (data) { apiKey = data; localStorage.setItem('guru_ai_api_key', data); checkApiKey(); } break;
   }
 }
@@ -1837,14 +1939,16 @@ function refreshCurrentPageData() {
   const pageId = activePage.id.replace('page-', '');
   if (pageId === 'siswa') renderStudentGrid();
   if (pageId === 'jadwal') initJadwal();
+  if (pageId === 'organisasi') renderOrganisasiForm();
   if (pageId === 'absensi') { initAbsensi(); renderAbsenRekap(); }
   if (pageId === 'pengumuman') renderPengumuman();
   if (pageId === 'reward') initReward();
   if (pageId === 'icebreaking') renderIceFav();
-  if (pageId === 'kelas') { checkSiswaKelas(); renderWheel(); }
+  if (pageId === 'kelas') { checkSiswaKelas(); renderWheel(); renderKelompokResmi(); }
   if (pageId === 'chat') { renderChatHistoryBubbles(); renderProfilPanel(); }
   checkBirthdaysToday();
   checkPengumumanReminder();
+  checkAbsensiReminder();
 }
 
 
@@ -1873,18 +1977,23 @@ function safeReplaceState(state, url) {
 // Self-managed navigation stack — tidak bergantung pada History API browser
 // (lebih reliable, terutama untuk iOS PWA standalone yang sering buggy soal history.back())
 let navStack = ['dashboard'];
-const navItemMap = {dashboard:0,soal:1,rpp:2,cerita:3,chat:4,lkpd:5,icebreaking:6,kelas:7,siswa:9,jadwal:10,nilai:11,absensi:12,pengumuman:13,reward:14};
 
 function safeGoBack() {
   if (navStack.length > 1) {
     navStack.pop();
     const prevPage = navStack[navStack.length - 1];
-    const idx = navItemMap[prevPage] !== undefined ? navItemMap[prevPage] : 0;
-    const el = document.querySelectorAll('.nav-item')[idx];
+    const el = getNavItemByPage(prevPage === 'kelas' ? 'kelas' : prevPage) || document.querySelectorAll('.nav-item')[0];
     nav(prevPage, el, true, true);
   } else {
     nav('dashboard', document.querySelectorAll('.nav-item')[0], true, true);
   }
+}
+
+function getNavItemByPage(pageName){
+  return Array.from(document.querySelectorAll('.nav-item')).find(function(el){
+    const oc = el.getAttribute('onclick') || '';
+    return oc.indexOf("nav('" + pageName + "'") === 0;
+  });
 }
 
 function nav(page,el,skipHistory,skipStack){
@@ -1893,12 +2002,13 @@ function nav(page,el,skipHistory,skipStack){
   document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
   document.getElementById('page-'+page).classList.add('active');
   if(el)el.classList.add('active');
-  const titles={dashboard:'Dashboard',soal:'Buat Soal',rpp:'RPP & Modul Ajar',cerita:'Cerita Edukatif',chat:'AI Chat',kelas:'Alat Kelas',siswa:'Data Siswa',lkpd:'LKPD Generator',icebreaking:'Ice Breaking',jadwal:'Jadwal Pelajaran',nilai:'Nilai Siswa',absensi:'Absensi Harian',pengumuman:'Papan Pengumuman',reward:'Poin Reward Siswa'};
+  const titles={dashboard:'Dashboard',soal:'Buat Soal',rpp:'RPP & Modul Ajar',cerita:'Cerita Edukatif',chat:'AI Assistant',kelas:'Alat Kelas',siswa:'Data Siswa',lkpd:'LKPD Generator',icebreaking:'Ice Breaking',jadwal:'Jadwal Pelajaran',nilai:'Nilai Siswa',absensi:'Absensi Harian',pengumuman:'Papan Pengumuman',reward:'Poin Reward Siswa'};
   const subs={dashboard:'Selamat datang, Bu Guru!',soal:'Generate soal otomatis dengan AI',rpp:'Buat RPP dan Modul Ajar Kurikulum Merdeka',cerita:'Generate cerita dan konten edukatif',chat:'Konsultasi seputar mengajar',kelas:'Roda nama, timer, dan pembuat kelompok',siswa:'Kelola data siswa kelas 4',lkpd:'Buat LKPD digital siap print — Kurikulum Merdeka',icebreaking:'Aktivitas pembuka kelas yang menyenangkan',jadwal:'Atur jadwal pelajaran mingguan kelas 4',nilai:'Input dan rekap nilai siswa',absensi:'Catat kehadiran siswa harian',pengumuman:'Pengingat tugas, ulangan & kegiatan',reward:'Beri bintang & poin motivasi siswa'};
   document.getElementById('topbar-title').textContent=titles[page]||page;
   document.getElementById('topbar-sub').textContent=subs[page]||'';
   if(page==='siswa')renderStudentGrid();
   if(page==='jadwal')initJadwal();
+  if(page==='organisasi')renderOrganisasiForm();
   if(page==='nilai')initNilai();
   if(page==='absensi'){initAbsensi();renderAbsenRekap();switchAbsenTab('harian');}
   if(page==='pengumuman')renderPengumuman();
@@ -1907,6 +2017,7 @@ function nav(page,el,skipHistory,skipStack){
   if(page==='kelas'){checkSiswaKelas();renderWheel();}
   if(page==='chat'){renderChatHistoryBubbles();renderProfilPanel();}
   checkPengumumanReminder();
+  checkAbsensiReminder();
   closeSidebar();
   updateBackButton(page);
   if (!skipStack) {
@@ -1929,8 +2040,7 @@ window.addEventListener('popstate', function(e) {
     return;
   }
   const page = (e.state && e.state.guruAiPage) || 'dashboard';
-  const idx = navItemMap[page] !== undefined ? navItemMap[page] : 0;
-  const el = document.querySelectorAll('.nav-item')[idx];
+  const el = getNavItemByPage(page) || document.querySelectorAll('.nav-item')[0];
   navStack = [page];
   nav(page, el, true, true);
 });
@@ -1948,7 +2058,7 @@ function switchKelas(tab){
   const btn=document.getElementById('tab-'+tab);
   if(btn)btn.classList.add('active');
   if(tab==='wheel'){checkSiswaKelas();renderWheel();}
-  if(tab==='group')checkSiswaGroup();
+  if(tab==='group'){checkSiswaGroup();renderKelompokResmi();}
 }
 
 function toggleSidebar(){document.getElementById('sidebar').classList.toggle('open');document.getElementById('overlay').classList.toggle('show');}
@@ -2114,7 +2224,7 @@ function renderChatHistoryBubbles(){
 }
 
 function clearChatHistory(){
-  if(!confirm('Hapus semua riwayat AI Chat? Profil mengajar yang sudah tersimpan tidak akan ikut terhapus.')) return;
+  if(!confirm('Hapus semua riwayat AI Assistant? Profil mengajar yang sudah tersimpan tidak akan ikut terhapus.')) return;
   chatHistory=[];
   saveChatHistory();
   const c=document.getElementById('chat-messages');
@@ -2138,7 +2248,7 @@ function renderProfilPanel(){
     el.textContent = teacherProfile;
     status.textContent = '· sudah ada profil';
   } else {
-    el.textContent = 'Belum ada profil. Mengobrol beberapa kali dulu dengan AI Chat, lalu klik "Perbarui Profil" supaya AI mulai mengenali gaya mengajar Bu Via.';
+    el.textContent = 'Belum ada profil. Mengobrol beberapa kali dulu dengan AI Assistant, lalu klik "Perbarui Profil" supaya AI mulai mengenali gaya mengajar Bu Via.';
     status.textContent = '';
   }
 }
@@ -2263,12 +2373,13 @@ function updateTimerDisplay(){
 function startTimer(){
   if(timerRemaining<=0)return;
   timerRunning=true;
+  playSound('timerStart');
   document.getElementById('btn-start').style.display='none';
   document.getElementById('btn-pause').style.display='inline-flex';
   document.getElementById('timer-label').textContent='Timer berjalan...';
   timerInterval=setInterval(()=>{
     timerRemaining--;updateTimerDisplay();
-    if(timerRemaining<=0){clearInterval(timerInterval);timerRunning=false;document.getElementById('timer-label').textContent='⏰ Waktu habis!';document.getElementById('btn-pause').style.display='none';document.getElementById('btn-start').style.display='inline-flex';showToast('⏰ Waktu habis!');}
+    if(timerRemaining<=0){clearInterval(timerInterval);timerRunning=false;document.getElementById('timer-label').textContent='⏰ Waktu habis!';document.getElementById('btn-pause').style.display='none';document.getElementById('btn-start').style.display='inline-flex';playSound('timerEnd');showToast('⏰ Waktu habis!');}
   },1000);
 }
 function pauseTimer(){clearInterval(timerInterval);timerRunning=false;document.getElementById('btn-pause').style.display='none';document.getElementById('btn-resume').style.display='inline-flex';document.getElementById('timer-label').textContent='Timer dijeda';}
@@ -2277,6 +2388,169 @@ function resetTimer(){clearInterval(timerInterval);timerRunning=false;timerRemai
 function resetTimerUI(){document.getElementById('btn-start').style.display='inline-flex';document.getElementById('btn-pause').style.display='none';document.getElementById('btn-resume').style.display='none';}
 
 // GROUPS
+// KELOMPOK BELAJAR RESMI
+let kelompokResmiData = JSON.parse(localStorage.getItem('kelompok_resmi') || '[{"nama":"Kelompok 1","anggota":["Rafi Adib Albara","Muhammad Hafiz Agastiya Akbar","Naufal Arfan Rafassya","Raihan Nanda Ramadhan","Muhammad Irsyad Maulana","Sultan Maulana Suherman","Fandu Lesmana"]},{"nama":"Kelompok 2","anggota":["Ahmad Sonhaj Dimiyati","Muhamad Azkha Algifari","Muhamad Rifki Ramdani","Nazar Muhammad","Gibran Rafif Arkan","Raka Safutra"]},{"nama":"Kelompok 3","anggota":["Firda Paridah","Azkia Nafisa Aprilia","Nurul Fuadah","Nailla Priska Amanda","Ramadhania Aisyah Nurhasanah","Irsalina Nabila","Mikayla Azzalea Susanto"]},{"nama":"Kelompok 4","anggota":["Raditya Putra","Abdul Kahfi","Muhammad Nazriel Anshari","Ghifar Syam Ibtisam Khan","Muhamad Wavi Al Gipari","Muhammad Zibran Akbar"]}]');
+
+function renderKelompokResmi(){
+  const el = document.getElementById('kelompok-resmi-list');
+  if (!el) return;
+  if (!kelompokResmiData.length) { el.innerHTML = '<div style="text-align:center;padding:20px;color:var(--text-muted)">Belum ada kelompok belajar tersimpan.</div>'; return; }
+  el.innerHTML = kelompokResmiData.map(function(k, i){
+    return '<div style="border:1px solid var(--border);border-radius:10px;margin-bottom:10px;overflow:hidden">'
+      + '<div style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--off)">'
+      + '<span style="font-weight:700;font-size:13px">' + k.nama + ' <span style="font-weight:400;color:var(--text-sub);font-size:11px">(' + k.anggota.length + ' siswa)</span></span>'
+      + '<div style="display:flex;gap:6px">'
+      + '<button class="btn-sm" onclick="editKelompokResmi(' + i + ')">✎ Edit</button>'
+      + '<button class="btn-sm btn-danger" onclick="hapusKelompokResmi(' + i + ')">✕</button>'
+      + '</div></div>'
+      + '<div style="padding:10px 14px;font-size:13px;line-height:1.9">'
+      + k.anggota.map(function(a, idx){ return (idx + 1) + '. ' + a; }).join('<br>')
+      + '</div></div>';
+  }).join('');
+}
+
+function tambahKelompokResmi(){
+  document.getElementById('kelompok-edit-id').value = '-1';
+  document.getElementById('kelompok-modal-title').textContent = '+ Tambah Kelompok';
+  document.getElementById('kelompok-nama-input').value = 'Kelompok ' + (kelompokResmiData.length + 1);
+  document.getElementById('kelompok-anggota-input').value = '';
+  document.getElementById('kelompok-modal').classList.add('show');
+}
+
+function editKelompokResmi(index){
+  const k = kelompokResmiData[index];
+  if (!k) return;
+  document.getElementById('kelompok-edit-id').value = index;
+  document.getElementById('kelompok-modal-title').textContent = '✎ Edit ' + k.nama;
+  document.getElementById('kelompok-nama-input').value = k.nama;
+  document.getElementById('kelompok-anggota-input').value = k.anggota.join('\n');
+  document.getElementById('kelompok-modal').classList.add('show');
+}
+
+function hapusKelompokResmi(index){
+  if (!confirm('Hapus kelompok ini?')) return;
+  kelompokResmiData.splice(index, 1);
+  saveKelompokResmi();
+  renderKelompokResmi();
+}
+
+function simpanKelompokResmi(){
+  const idx = parseInt(document.getElementById('kelompok-edit-id').value, 10);
+  const nama = document.getElementById('kelompok-nama-input').value.trim();
+  if (!nama) { showToast('Isi nama kelompok!', true); return; }
+  const anggota = document.getElementById('kelompok-anggota-input').value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean);
+  const data = { nama: nama, anggota: anggota };
+  if (idx >= 0 && kelompokResmiData[idx]) {
+    kelompokResmiData[idx] = data;
+  } else {
+    kelompokResmiData.push(data);
+  }
+  document.getElementById('kelompok-modal').classList.remove('show');
+  saveKelompokResmi();
+  renderKelompokResmi();
+  showToast('Kelompok tersimpan! ✓');
+}
+
+function saveKelompokResmi(){
+  localStorage.setItem('kelompok_resmi', JSON.stringify(kelompokResmiData));
+  saveToFirestore('kelompok_resmi', kelompokResmiData);
+}
+
+// JADWAL PIKET
+let piketData = JSON.parse(localStorage.getItem('piket') || '{"Senin":["Muhamad Azkha Algifari","Rafi Adib Albara","Sultan Maulana Suherman","Ramadhania Aisyah Nurhasanah","Irsalina Nabila"],"Selasa":["Muhammad Irsyad Maulana","Ahmad Sonhaj Dimiyati","Muhammad Hafiz Agastiya Akbar","Raka Safutra","Azkia Nafisa Aprilia"],"Rabu":["Muhamad Wavi Al Gipari","Muhamad Rifki Ramdani","Abdul Kahfi","Nurul Fuadah","Firda Paridah","Muhammad Nazriel Anshari"],"Kamis":["Ghifar Syam Ibtisam Khan","Raihan Nanda Ramadhan","Gibran Rafif Arkan","Nazar Muhammad","Nailla Priska Amanda"],"Jumat":["Naufal Arfan Rafassya","Raditya Putra","Muhammad Zibran Akbar","Fandu Lesmana","Mikayla Azzalea Susanto"]}');
+
+function switchJadwalTab(tab){
+  ['pelajaran','piket'].forEach(function(t){
+    document.getElementById('jadwal-' + t + '-sec').classList.remove('active');
+    const btn = document.getElementById('tab-jadwal-' + t);
+    if (btn) btn.classList.remove('active');
+  });
+  document.getElementById('jadwal-' + tab + '-sec').classList.add('active');
+  const btn = document.getElementById('tab-jadwal-' + tab);
+  if (btn) btn.classList.add('active');
+  if (tab === 'piket') renderPiketForm();
+}
+
+function renderPiketForm(){
+  ['Senin','Selasa','Rabu','Kamis','Jumat'].forEach(function(h){
+    const el = document.getElementById('piket-' + h);
+    if (el) el.value = (piketData[h] || []).join('\n');
+  });
+}
+
+function savePiket(){
+  const newData = {};
+  ['Senin','Selasa','Rabu','Kamis','Jumat'].forEach(function(h){
+    const el = document.getElementById('piket-' + h);
+    newData[h] = el ? el.value.split('\n').map(function(s){ return s.trim(); }).filter(Boolean) : [];
+  });
+  piketData = newData;
+  localStorage.setItem('piket', JSON.stringify(piketData));
+  saveToFirestore('piket', piketData);
+  showToast('Jadwal piket tersimpan! ✓');
+}
+
+// STRUKTUR ORGANISASI
+let organisasiData = JSON.parse(localStorage.getItem('organisasi') || '{"waliKelas":"Ibu Via Widia, S.Pd","ketuaKelas":"Hafiz","wakilKetua":"Kahfi","sekretaris":"Firda","wSekretaris":"Azkia","bendahara":"Sultan","wBendahara":"Wavi","kebersihan":"Adit, Nurul","keamanan":"Sonhaz, Rafi","anggota":"Semua warga kelas IV-A"}');
+
+function renderOrganisasiForm(){
+  const d = organisasiData;
+  const set = (id, val) => { const el = document.getElementById(id); if (el) el.value = val || ''; };
+  set('org-wali', d.waliKelas);
+  set('org-ketua', d.ketuaKelas);
+  set('org-wakil', d.wakilKetua);
+  set('org-anggota', d.anggota);
+  set('org-sekretaris', d.sekretaris);
+  set('org-bendahara', d.bendahara);
+  set('org-wsekretaris', d.wSekretaris);
+  set('org-wbendahara', d.wBendahara);
+  set('org-kebersihan', d.kebersihan);
+  set('org-keamanan', d.keamanan);
+  renderOrgPreview();
+}
+
+function renderOrgPreview(){
+  const el = document.getElementById('org-preview');
+  if (!el) return;
+  const d = organisasiData;
+  const row = (label, val) => '<div style="margin-bottom:10px"><div style="font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px">' + label + '</div><div style="font-weight:700;border-bottom:2px solid var(--border);display:inline-block;padding:0 12px 2px">' + (val || '-') + '</div></div>';
+  el.innerHTML =
+    row('Wali Kelas', d.waliKelas) +
+    row('Ketua Kelas', d.ketuaKelas) +
+    row('Wakil Ketua Kelas', d.wakilKetua) +
+    '<div style="display:flex;justify-content:center;gap:60px;flex-wrap:wrap;margin-top:6px">' +
+      '<div>' + row('Sekretaris', d.sekretaris) + row('W. Sekretaris', d.wSekretaris) + '</div>' +
+      '<div>' + row('Bendahara', d.bendahara) + row('W. Bendahara', d.wBendahara) + '</div>' +
+    '</div>' +
+    '<div style="display:flex;justify-content:center;gap:60px;flex-wrap:wrap;margin-top:6px">' +
+      '<div>' + row('Seksi Kebersihan', d.kebersihan) + '</div>' +
+      '<div>' + row('Seksi Keamanan', d.keamanan) + '</div>' +
+    '</div>' +
+    '<div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">' +
+      '<div style="font-size:11px;color:var(--text-sub);text-transform:uppercase;letter-spacing:.5px">Anggota</div>' +
+      '<div style="font-weight:600">' + (d.anggota || '-') + '</div>' +
+    '</div>';
+}
+
+function saveOrganisasi(){
+  organisasiData = {
+    waliKelas: document.getElementById('org-wali').value.trim(),
+    ketuaKelas: document.getElementById('org-ketua').value.trim(),
+    wakilKetua: document.getElementById('org-wakil').value.trim(),
+    anggota: document.getElementById('org-anggota').value.trim(),
+    sekretaris: document.getElementById('org-sekretaris').value.trim(),
+    bendahara: document.getElementById('org-bendahara').value.trim(),
+    wSekretaris: document.getElementById('org-wsekretaris').value.trim(),
+    wBendahara: document.getElementById('org-wbendahara').value.trim(),
+    kebersihan: document.getElementById('org-kebersihan').value.trim(),
+    keamanan: document.getElementById('org-keamanan').value.trim()
+  };
+  localStorage.setItem('organisasi', JSON.stringify(organisasiData));
+  saveToFirestore('organisasi', organisasiData);
+  renderOrgPreview();
+  showToast('Struktur organisasi tersimpan! ✓');
+}
+
 function makeGroups(){
   if(!students.length){showToast('Belum ada data siswa!',true);return;}
   const mode=document.getElementById('group-mode').value,count=parseInt(document.getElementById('group-count').value),theme=document.getElementById('group-theme').value;
@@ -2327,8 +2601,10 @@ function checkBirthdaysToday(){
   if (celebrants.length){
     document.getElementById('birthday-names').textContent = celebrants.join(', ') + ' merayakan ulang tahun hari ini — jangan lupa ucapkan selamat, Bu Via! 🎂';
     banner.style.display = 'block';
+    if (!_bannerSoundState.birthday) { playSound('banner'); _bannerSoundState.birthday = true; }
   } else {
     banner.style.display = 'none';
+    _bannerSoundState.birthday = false;
   }
 }
 
@@ -2991,6 +3267,7 @@ function saveAbsensi() {
   absensiData[key] = { tanggal: tgl, data: {...absenToday} };
   localStorage.setItem('absensi', JSON.stringify(absensiData)); saveToFirestore('absensi', absensiData);
   renderAbsenRekap();
+  checkAbsensiReminder();
   showToast('Absensi berhasil disimpan! ✓');
 }
 
@@ -3150,6 +3427,7 @@ function simpanFotoAbsen() {
   saveToFirestore('absensi', absensiData);
   renderAbsenRekap();
   renderFotoAbsenGrid();
+  checkAbsensiReminder();
   showToast('Absensi foto berhasil disimpan! ✓');
 }
 
@@ -3383,6 +3661,87 @@ function kirimPengumumanWA(id){
   checkPengumumanReminder();
 }
 
+// SOUND NOTIFICATIONS
+let audioCtx = null;
+function getAudioCtx(){
+  if (!audioCtx) {
+    try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { return null; }
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  return audioCtx;
+}
+
+function playTone(freq, duration, delay, volume){
+  const ctx = getAudioCtx();
+  if (!ctx) return;
+  try {
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'sine';
+    osc.frequency.value = freq;
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+    const startTime = ctx.currentTime + (delay || 0);
+    const vol = volume || 0.15;
+    gain.gain.setValueAtTime(vol, startTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, startTime + duration);
+    osc.start(startTime);
+    osc.stop(startTime + duration + 0.02);
+  } catch(e) { /* audio not available, fail silently */ }
+}
+
+let soundMuted = localStorage.getItem('sound_muted') === 'true';
+
+function toggleSoundMute(){
+  soundMuted = !soundMuted;
+  localStorage.setItem('sound_muted', soundMuted ? 'true' : 'false');
+  updateSoundToggleBtn();
+  if (!soundMuted) playSound('banner');
+}
+
+function updateSoundToggleBtn(){
+  const btn = document.getElementById('sound-toggle-btn');
+  if (!btn) return;
+  btn.textContent = soundMuted ? '🔇' : '🔔';
+}
+
+function playSound(type){
+  if (soundMuted) return;
+  if (type === 'banner') {
+    playTone(880, 0.12, 0, 0.12);
+    playTone(1320, 0.15, 0.12, 0.12);
+  } else if (type === 'timerStart') {
+    playTone(660, 0.15, 0, 0.15);
+  } else if (type === 'timerEnd') {
+    playTone(988, 0.18, 0, 0.22);
+    playTone(988, 0.18, 0.25, 0.22);
+    playTone(988, 0.18, 0.5, 0.22);
+  }
+}
+
+let _bannerSoundState = { birthday: false, pengumuman: false, absensi: false };
+
+function localDateStr(d){
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return y + '-' + m + '-' + day;
+}
+
+function checkAbsensiReminder(){
+  const banner = document.getElementById('absensi-reminder-banner');
+  if (!banner) return;
+  const days = ['Minggu','Senin','Selasa','Rabu','Kamis','Jumat','Sabtu'];
+  const now = new Date();
+  const todayName = days[now.getDay()];
+  const isSchoolDay = ['Senin','Selasa','Rabu','Kamis','Jumat'].includes(todayName);
+  const todayKey = localDateStr(now);
+  const sudahDiisi = !!(absensiData && absensiData[todayKey]);
+  const jamCukupSiang = now.getHours() >= 9;
+  const shouldShow = (isSchoolDay && !sudahDiisi && jamCukupSiang);
+  banner.style.display = shouldShow ? 'block' : 'none';
+  if (shouldShow && !_bannerSoundState.absensi) { playSound('banner'); _bannerSoundState.absensi = true; }
+  if (!shouldShow) _bannerSoundState.absensi = false;
+}
+
 function checkPengumumanReminder(){
   const banner = document.getElementById('pengumuman-reminder-banner');
   if (!banner) return;
@@ -3390,8 +3749,10 @@ function checkPengumumanReminder(){
   if (belumTerkirim.length){
     document.getElementById('pengumuman-reminder-list').innerHTML = belumTerkirim.map(p => '• ' + p.judul).join('<br>');
     banner.style.display = 'block';
+    if (!_bannerSoundState.pengumuman) { playSound('banner'); _bannerSoundState.pengumuman = true; }
   } else {
     banner.style.display = 'none';
+    _bannerSoundState.pengumuman = false;
   }
 }
 
@@ -3477,7 +3838,7 @@ function resetAllReward() {
 // ── LKPD GENERATOR ────────────────────────────────────────────
 function withTeacherProfileContext(baseSystem){
   if (teacherProfile && teacherProfile.trim()) {
-    return baseSystem + '\n\nKonteks tambahan tentang gaya mengajar Bu Via (rangkuman dari histori AI Chat) — gunakan untuk menyesuaikan pendekatan, jenis kegiatan, dan gaya konten supaya sesuai preferensinya, tanpa mengabaikan spesifikasi yang diminta di atas:\n' + teacherProfile;
+    return baseSystem + '\n\nKonteks tambahan tentang gaya mengajar Bu Via (rangkuman dari histori AI Assistant) — gunakan untuk menyesuaikan pendekatan, jenis kegiatan, dan gaya konten supaya sesuai preferensinya, tanpa mengabaikan spesifikasi yang diminta di atas:\n' + teacherProfile;
   }
   return baseSystem;
 }
@@ -3761,6 +4122,7 @@ function copyLKPD() {
 
 // INIT
 checkApiKey();
+updateSoundToggleBtn();
 safeReplaceState({ guruAiPage: 'dashboard' }, '#dashboard');
 updateBackButton('dashboard');
 setTimer(5,document.querySelectorAll('.preset')[3]);
